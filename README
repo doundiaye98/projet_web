@@ -1,0 +1,69 @@
+book-club/
+│
+├── config/
+│   ├── db.php
+│   └── constants.php
+│
+├── includes/
+│   ├── auth.php
+│   ├── helpers.php
+│   └── layout/
+│       ├── header.php
+│       ├── footer.php
+│       ├── nav.php
+│       └── partials/
+│           ├── _book_card.php
+│           ├── _flash.php
+│           ├── _badge_role.php
+│           ├── _stars.php
+│           ├── _progress_bar.php
+│           └── _document_row.php
+│
+├── modules/
+│   ├── auth/
+│   │   ├── functions.php
+│   │   ├── process.php
+│   │   ├── login.php
+│   │   └── register.php
+│   │
+│   ├── authors/
+│   │   └── functions.php
+│   │
+│   ├── books/
+│   │   ├── functions.php
+│   │   ├── process.php
+│   │   ├── index.php
+│   │   ├── show.php
+│   │   ├── create.php
+│   │   └── edit.php
+│   │
+│   ├── documents/
+│   │   ├── functions.php
+│   │   ├── process.php
+│   │   └── download.php
+│   │
+│   ├── reviews/
+│   │   ├── functions.php
+│   │   └── process.php
+│   │
+│   ├── progress/
+│   │   ├── functions.php
+│   │   └── process.php
+│   │
+│   └── sessions/
+│       ├── functions.php
+│       ├── process.php
+│       ├── index.php
+│       ├── show.php
+│       └── create.php
+│
+├── uploads/
+│   ├── covers/
+│   └── documents/
+│
+├── assets/
+│   └── js/
+│       └── app.js
+│
+├── dashboard.php
+└── index.php
