@@ -1,6 +1,9 @@
 <?php
+define('SECURE_ACCESS', true);
 $pageTitle = 'Inscription';
 include '../../includes/layout/header.php';
+$error = $_GET['error'] ?? '';
+$success = isset($_GET['success']);
 ?>
 
 <div class="flex items-center justify-center px-4 py-16">
@@ -11,6 +14,14 @@ include '../../includes/layout/header.php';
       <h1 class="font-display text-3xl text-ink">◈ Book Club</h1>
       <p class="text-muted text-sm mt-1 font-light">Créez votre compte</p>
     </div>
+
+
+    <!-- Flash succès -->
+    <?php if ($success): ?>
+    <div class="mb-5 px-4 py-3 bg-green-50 border border-green-200 rounded-md text-green-700 text-sm">
+      Inscription réussie ! Vous pouvez maintenant vous connecter.
+    </div>
+    <?php endif; ?>
 
     <!-- Flash erreur -->
     <?php if (!empty($error)): ?>
@@ -36,7 +47,7 @@ include '../../includes/layout/header.php';
           autocomplete="name"
           placeholder="Jean Dupont"
           value="<?= htmlspecialchars($_POST['nom'] ?? '') ?>"
-          class="w-full px-4 py-3 bg-white border border-border rounded-md text-sm text-ink placeholder-stone-400 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/10 transition"
+          class="w-full px-4 py-3 bg-white border border-border rounded-2xl text-sm text-ink placeholder-stone-400 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/10 transition"
         >
       </div>
 
@@ -52,7 +63,7 @@ include '../../includes/layout/header.php';
           autocomplete="email"
           placeholder="vous@exemple.com"
           value="<?= htmlspecialchars($_POST['email'] ?? '') ?>"
-          class="w-full px-4 py-3 bg-white border border-border rounded-md text-sm text-ink placeholder-stone-400 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/10 transition"
+          class="w-full px-4 py-3 bg-white border border-border rounded-2xl text-sm text-ink placeholder-stone-400 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/10 transition"
         >
       </div>
 
@@ -67,7 +78,7 @@ include '../../includes/layout/header.php';
           required
           autocomplete="new-password"
           placeholder="••••••••"
-          class="w-full px-4 py-3 bg-white border border-border rounded-md text-sm text-ink placeholder-stone-400 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/10 transition"
+          class="w-full px-4 py-3 bg-white border border-border rounded-2xl text-sm text-ink placeholder-stone-400 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/10 transition"
         >
       </div>
 
@@ -82,13 +93,13 @@ include '../../includes/layout/header.php';
           required
           autocomplete="new-password"
           placeholder="••••••••"
-          class="w-full px-4 py-3 bg-white border border-border rounded-md text-sm text-ink placeholder-stone-400 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/10 transition"
+          class="w-full px-4 py-3 bg-white border border-border rounded-2xl text-sm text-ink placeholder-stone-400 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/10 transition"
         >
       </div>
 
       <button
         type="submit"
-        class="w-full py-3 bg-ink text-cream text-sm font-medium rounded-md hover:bg-stone-800 active:scale-[0.99] transition"
+        class="w-full py-3 bg-ink text-cream text-sm font-medium rounded-2xl hover:bg-stone-800 active:scale-[0.99] transition"
       >
         Créer mon compte
       </button>

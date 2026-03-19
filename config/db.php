@@ -1,10 +1,11 @@
 <?php
+require_once __DIR__ . '/../includes/auth/session.php';
 $host = 'localhost';
 $user = 'root';
-$password = 'root';
+$db_password = 'root';
 $db = 'projet_web';
 
-$mysqli = new mysqli($host, $user, $password, $db);
+$mysqli = new mysqli($host, $user, $db_password, $db);
 
 if ($mysqli->connect_error) {
     die('Erreur de connexion : ' . $mysqli->connect_error);
