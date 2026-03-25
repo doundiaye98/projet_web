@@ -13,7 +13,8 @@ CREATE TABLE users (
   password_hash VARCHAR(255) NOT NULL,
   role ENUM('admin', 'moderateur', 'membre') NOT NULL DEFAULT 'membre',
   statut ENUM('actif', 'inactif', 'banni') NOT NULL DEFAULT 'actif',
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  is_system TINYINT(1) DEFAULT 0
 );
 
 -- --------------------------------------------------------
