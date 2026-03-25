@@ -1,5 +1,4 @@
 <?php
-require_once __DIR__ . '/../../includes/auth/session.php';
 
 /**
  * Récupère tous les utilisateurs de la base de données
@@ -96,3 +95,6 @@ function createUser($mysqli, $nom, $email, $password, $role = 'membre') {
         return "Erreur lors de la création de l'utilisateur : " . $stmt->error;
     }
 }
+
+// --- PROTECTION ---
+require_once __DIR__ . '/../../includes/auth/session.php';

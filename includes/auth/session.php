@@ -8,10 +8,6 @@ function abort_access() {
     exit();
 }
 
-if (!defined('SECURE_ACCESS')) {
-    abort_access();
-}
-
 // Vérifie si la session utilisateur est active
 function isUserLoggedIn() {
     if (session_status() === PHP_SESSION_NONE) {
@@ -34,5 +30,10 @@ function getUserRole() {
         session_start();
     }
     return isset($_SESSION['user_role']) ? $_SESSION['user_role'] : null;
+}
+
+// LE GARDIEN : Vérifie si l'accès est autorisé via un point d'entrée officiel
+if (!defined('SECURE_ACCESS')) {
+    abort_access();
 }
 
