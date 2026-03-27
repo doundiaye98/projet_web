@@ -60,7 +60,7 @@ include __DIR__ . '/../../includes/layout/header.php';
       </button>
       
       <!-- Underline coulissant -->
-      <div id="main-tab-underline" class="absolute bottom-0 left-0 h-0.5 bg-accent transition-all duration-300 ease-in-out pointer-events-none"></div>
+      <div id="main-tab-underline" class="absolute bottom-[-1px] left-0 h-0.5 bg-accent transition-all duration-300 ease-in-out pointer-events-none"></div>
     </div>
 
     <!-- Bouton Trier (Menu Radio) -->
