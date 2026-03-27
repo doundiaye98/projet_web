@@ -1,4 +1,5 @@
 <?php
+defined("SECURE_ACCESS") or die("Accès direct interdit");
 /**
  * Partial : Barre de progression de lecture
  * Reçoit : $current (page actuelle) et $total (nombre de pages)

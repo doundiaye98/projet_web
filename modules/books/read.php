@@ -1,4 +1,5 @@
 <?php
+defined("SECURE_ACCESS") or die("Accès direct interdit");
 /**
  * Lecteur de livre intégré - Version avec Suivi de Progression (Style Marque-page Épuré)
  */

@@ -1,4 +1,5 @@
 <?php
+defined("SECURE_ACCESS") or die("Accès direct interdit");
 /**
  * Vue détaillée d'un livre
  * Accessible via /books/[id]

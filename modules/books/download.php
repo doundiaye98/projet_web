@@ -1,4 +1,5 @@
 <?php
+defined("SECURE_ACCESS") or die("Accès direct interdit");
 /**
  * Script de téléchargement - Version Correcte (Champs BDD correspondants)
  */

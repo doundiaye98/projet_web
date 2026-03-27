@@ -1,4 +1,5 @@
 <?php
+defined("SECURE_ACCESS") or die("Accès direct interdit");
 /**
  * Partial : Carte de ressource individuelle (document complémentaire)
  * @var array $res Données de la ressource (filename, filepath, size, type)

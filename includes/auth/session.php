@@ -1,4 +1,5 @@
 <?php
+defined("SECURE_ACCESS") or die("Accès direct interdit");
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }

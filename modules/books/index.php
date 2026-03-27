@@ -1,4 +1,5 @@
 <?php
+defined("SECURE_ACCESS") or die("Accès direct interdit");
 require_once __DIR__ . '/functions.php';
 
 $pageTitle = 'Livres';

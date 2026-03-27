@@ -1,4 +1,5 @@
 <?php
+defined("SECURE_ACCESS") or die("Accès direct interdit");
 
 /**
  * Récupère tous les auteurs triés alphabétiquement

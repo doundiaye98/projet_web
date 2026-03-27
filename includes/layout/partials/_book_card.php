@@ -1,4 +1,5 @@
 <?php
+defined("SECURE_ACCESS") or die("Accès direct interdit");
 /**
  * Partial: _book_card.php
  * Affiche une carte de livre avec les actions d'édition et de suppression.

@@ -1,4 +1,5 @@
 <?php
+defined("SECURE_ACCESS") or die("Accès direct interdit");
 
 /**
  * Récupère tous les utilisateurs de la base de données

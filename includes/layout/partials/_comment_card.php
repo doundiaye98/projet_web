@@ -1,4 +1,5 @@
 <?php
+defined("SECURE_ACCESS") or die("Accès direct interdit");
 /**
  * Partial : Carte d'avis lecteur (Commentaire)
  * @var array $rev Données de l'avis (note, commentaire, created_at, auteur_critique)

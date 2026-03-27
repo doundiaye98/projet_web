@@ -1,26 +1,27 @@
 <?php
+defined("SECURE_ACCESS") or die("Accès direct interdit");
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 $isLoggedIn = isset($_SESSION['user_id']);
 
-$homeUrl  = defined('BASE_URL') ? BASE_URL . '/' : '/';
+$homeUrl = defined('BASE_URL') ? BASE_URL . '/' : '/';
 $loginUrl = defined('BASE_URL') ? BASE_URL . '/login' : '/login';
 
 // $errorCode peut être défini avant l'include, sinon on détecte via Apache
 if (!isset($errorCode)) {
-    $errorCode = (int)($_SERVER['REDIRECT_STATUS'] ?? 403);
+    $errorCode = (int) ($_SERVER['REDIRECT_STATUS'] ?? 403);
 }
 
 $errors = [
     403 => [
-        'title'   => 'Accès Refusé',
-        'badge'   => '403',
+        'title' => 'Accès Refusé',
+        'badge' => '403',
         'message' => 'Cette section est réservée ou inaccessible directement.',
     ],
     404 => [
-        'title'   => 'Page introuvable',
-        'badge'   => '404',
+        'title' => 'Page introuvable',
+        'badge' => '404',
         'message' => 'La page que vous cherchez n\'existe pas ou a été déplacée.',
     ],
 ];
@@ -80,7 +81,7 @@ $error = $errors[$errorCode] ?? $errors[403];
         </div>
 
         <p class="text-[11px] text-muted/60 pt-8 uppercase tracking-widest font-medium">
-            &copy; <?= date('Y') ?> Book Club • Système de Protection
+            &copy; <?= date('Y') ?> Book Club
         </p>
     </div>
 </body>

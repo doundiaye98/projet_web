@@ -1,4 +1,5 @@
 <?php
+defined("SECURE_ACCESS") or die("Accès direct interdit");
 /**
  * Partial: _stars.php
  * Affiche une note sous forme d'étoiles (Phosphor Icons).
