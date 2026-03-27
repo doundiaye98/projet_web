@@ -1,4 +1,7 @@
 <?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 /**
  * Arrête l'exécution et affiche une page d'erreur stylisée 403
  */
@@ -19,7 +22,8 @@ function isUserLoggedIn() {
 // Fonction centralisée pour protéger les routes
 function requireLogin() {
     if (!isUserLoggedIn()) {
-        header('Location: /modules/auth/login.php');
+        $base = defined('BASE_URL') ? BASE_URL : '';
+        header('Location: ' . $base . '/login');
         exit();
     }
 }
@@ -29,11 +33,10 @@ function getUserRole() {
     if (session_status() === PHP_SESSION_NONE) {
         session_start();
     }
-    return isset($_SESSION['user_role']) ? $_SESSION['user_role'] : null;
+    return $_SESSION['user_role'] ?? null;
 }
 
 // LE GARDIEN : Vérifie si l'accès est autorisé via un point d'entrée officiel
 if (!defined('SECURE_ACCESS')) {
     abort_access();
 }
-

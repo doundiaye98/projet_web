@@ -13,14 +13,14 @@ $hashed = password_hash($password, PASSWORD_DEFAULT);
 
 // Vérifier si l'admin existe déjà
 $sql_check = "SELECT id FROM users WHERE email = ?";
-$stmt_check = $conn->prepare($sql_check);
+$stmt_check = $mysqli->prepare($sql_check);
 $stmt_check->bind_param("s", $email);
 $stmt_check->execute();
 $stmt_check->store_result();
 
 if ($stmt_check->num_rows === 0) {
     $sql = "INSERT INTO users (nom, email, password_hash, role, statut) VALUES (?, ?, ?, ?, ?)";
-    $stmt = $conn->prepare($sql);
+    $stmt = $mysqli->prepare($sql);
     $stmt->bind_param("sssss", $nom, $email, $hashed, $role, $statut);
     if ($stmt->execute()) {
         echo "Admin ajouté avec succès";
@@ -32,4 +32,4 @@ if ($stmt_check->num_rows === 0) {
     echo "L'admin existe déjà.";
 }
 $stmt_check->close();
-$conn->close();
+$mysqli->close();

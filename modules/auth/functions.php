@@ -1,7 +1,4 @@
-<?php 
-require_once __DIR__ . '/../../includes/auth/session.php';
-
-// Fonction de connection 
+<?php
 
 function login($mysqli, $email, $password) {
     $sql = "SELECT id, nom, email, password_hash, role FROM users WHERE email = ? AND statut = 'actif'";
@@ -13,12 +10,10 @@ function login($mysqli, $email, $password) {
     if ($result->num_rows === 1) {
         $user = $result->fetch_assoc();
         if (password_verify($password, $user['password_hash'])) {
-            // Authentification réussie
-            session_start();
-            $_SESSION['user_id'] = $user['id'];
-            $_SESSION['user_name'] = $user['nom'];
+            $_SESSION['user_id']    = $user['id'];
+            $_SESSION['user_name']  = $user['nom'];
             $_SESSION['user_email'] = $user['email'];
-            $_SESSION['user_role'] = $user['role'];
+            $_SESSION['user_role']  = $user['role'];
             return true;
         }
     }
@@ -26,7 +21,6 @@ function login($mysqli, $email, $password) {
 }
 
 function register($mysqli, $nom, $email, $password) {
-    // Vérifier si l'email existe déjà
     $sql_check = "SELECT id FROM users WHERE email = ?";
     $stmt_check = $mysqli->prepare($sql_check);
     $stmt_check->bind_param("s", $email);
@@ -37,10 +31,7 @@ function register($mysqli, $nom, $email, $password) {
         return "Cet email est déjà utilisé.";
     }
 
-    // Hash du mot de passe
     $password_hash = password_hash($password, PASSWORD_DEFAULT);
-
-    // Insérer l'utilisateur (role par défaut : membre)
     $sql_insert = "INSERT INTO users (nom, email, password_hash, role, statut) VALUES (?, ?, ?, 'membre', 'actif')";
     $stmt_insert = $mysqli->prepare($sql_insert);
     $stmt_insert->bind_param("sss", $nom, $email, $password_hash);
@@ -51,5 +42,3 @@ function register($mysqli, $nom, $email, $password) {
         return "Erreur lors de l'inscription : " . $stmt_insert->error;
     }
 }
-
-?>

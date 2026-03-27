@@ -4,12 +4,27 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 $isLoggedIn = isset($_SESSION['user_id']);
 
-// Calcul du chemin de base du projet (supporte les sous-dossiers)
-$projectRoot = str_replace($_SERVER['DOCUMENT_ROOT'], '', realpath(__DIR__ . '/../../'));
-$projectRoot = str_replace('\\', '/', $projectRoot); // Pour compatibilité Windows si besoin
+$homeUrl  = defined('BASE_URL') ? BASE_URL . '/' : '/';
+$loginUrl = defined('BASE_URL') ? BASE_URL . '/login' : '/login';
 
-$homeUrl = $projectRoot . '/index.php';
-$loginUrl = $projectRoot . '/modules/auth/login.php';
+// $errorCode peut être défini avant l'include, sinon on détecte via Apache
+if (!isset($errorCode)) {
+    $errorCode = (int)($_SERVER['REDIRECT_STATUS'] ?? 403);
+}
+
+$errors = [
+    403 => [
+        'title'   => 'Accès Refusé',
+        'badge'   => '403',
+        'message' => 'Cette section est réservée ou inaccessible directement.',
+    ],
+    404 => [
+        'title'   => 'Page introuvable',
+        'badge'   => '404',
+        'message' => 'La page que vous cherchez n\'existe pas ou a été déplacée.',
+    ],
+];
+$error = $errors[$errorCode] ?? $errors[403];
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -17,31 +32,8 @@ $loginUrl = $projectRoot . '/modules/auth/login.php';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Accès Refusé - Book Club</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        display: ['Playfair Display', 'serif'],
-                        body: ['DM Sans', 'sans-serif'],
-                    },
-                    colors: {
-                        cream: '#F5F0E8',
-                        ink: '#1C1917',
-                        muted: '#78716C',
-                        accent: '#C2410C',
-                        border: '#E2D9CC',
-                    }
-                }
-            }
-        }
-    </script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link
-        href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap"
-        rel="stylesheet">
+    <title><?= $error['badge'] ?> - Book Club</title>
+    <?php include __DIR__ . '/partials/_head_tags.php'; ?>
 </head>
 
 <body class="bg-cream min-h-screen font-body flex items-center justify-center p-6 text-ink">
@@ -56,16 +48,13 @@ $loginUrl = $projectRoot . '/modules/auth/login.php';
             </div>
             <div
                 class="absolute -top-2 -right-2 bg-white px-2 py-1 rounded-md shadow-sm border border-border text-[10px] font-bold tracking-widest text-accent uppercase">
-                403
+                <?= $error['badge'] ?>
             </div>
         </div>
 
         <div class="space-y-4">
             <h1 class="font-display text-4xl">Oups ! Vous vous êtes perdu...</h1>
-            <p class="text-muted leading-relaxed">
-                Il semble que vous vous soyez égaré dans les rayons de la librairie. Cette section est réservée ou
-                inaccessible directement.
-            </p>
+            <p class="text-muted leading-relaxed"><?= $error['message'] ?></p>
         </div>
 
         <div class="flex flex-col gap-3 pt-4">
@@ -88,15 +77,6 @@ $loginUrl = $projectRoot . '/modules/auth/login.php';
                     Se connecter
                 </a>
             <?php endif; ?>
-
-            <button onclick="window.location.reload()"
-                class="bg-white text-ink border border-border px-6 py-3 rounded-xl font-medium hover:bg-stone-50 transition-all flex items-center justify-center gap-2">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                Réessayer
-            </button>
         </div>
 
         <p class="text-[11px] text-muted/60 pt-8 uppercase tracking-widest font-medium">

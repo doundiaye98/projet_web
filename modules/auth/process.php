@@ -1,52 +1,50 @@
 <?php
-define('SECURE_ACCESS', true);
+require_once __DIR__ . '/functions.php';
 
-//login gestion formulaire
-
-require_once '../../config/db.php';
-require_once 'function.php';
-
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
+
     if ($action === 'register') {
-        $nom = trim($_POST['nom'] ?? '');
-        $email = trim($_POST['email'] ?? '');
-        $password = $_POST['password'] ?? '';
+        $nom              = trim($_POST['nom'] ?? '');
+        $email            = trim($_POST['email'] ?? '');
+        $password         = $_POST['password'] ?? '';
         $password_confirm = $_POST['password_confirm'] ?? '';
+
         if (empty($nom) || empty($email) || empty($password) || empty($password_confirm)) {
-            $error = "Veuillez remplir tous les champs.";
+            $_SESSION['flash_error'] = "Veuillez remplir tous les champs.";
         } elseif ($password !== $password_confirm) {
-            $error = "Les mots de passe ne correspondent pas.";
+            $_SESSION['flash_error'] = "Les mots de passe ne correspondent pas.";
         } else {
-            $register_result = register($mysqli, $nom, $email, $password);
-            if ($register_result === true) {
-                header('Location: login.php?success=1');
+            $result = register($mysqli, $nom, $email, $password);
+            if ($result === true) {
+                $_SESSION['flash_success'] = "Inscription réussie ! Vous pouvez maintenant vous connecter.";
+                header('Location: ' . BASE_URL . '/login');
                 exit;
             } else {
-                $error = $register_result;
+                $_SESSION['flash_error'] = $result;
             }
         }
-        header('Location: register.php?error=' . urlencode($error));
+        header('Location: ' . BASE_URL . '/register');
         exit;
+
     } else {
-        $email = trim($_POST["email"] ?? '');
-        $password = $_POST["password"] ?? '';
+        $email    = trim($_POST['email'] ?? '');
+        $password = $_POST['password'] ?? '';
+
         if (empty($email) || empty($password)) {
-            $error = "Veuillez remplir tous les champs.";
+            $_SESSION['flash_error'] = "Veuillez remplir tous les champs.";
         } else {
             if (login($mysqli, $email, $password)) {
-                header("Location: ../../index.php");
+                header('Location: ' . BASE_URL . '/');
                 exit;
             } else {
-                $error = "Email ou mot de passe incorrect.";
+                $_SESSION['flash_error'] = "Email ou mot de passe incorrect.";
             }
         }
-        header('Location: login.php?error=' . urlencode($error));
+        header('Location: ' . BASE_URL . '/login');
         exit;
     }
 } else {
-    header('Location: login.php');
+    header('Location: ' . BASE_URL . '/login');
     exit;
 }
-
-

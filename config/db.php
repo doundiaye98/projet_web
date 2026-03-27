@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/../includes/auth/session.php';
+
 $host = 'localhost';
 $user = 'root';
 $db_password = 'root';

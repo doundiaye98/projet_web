@@ -6,7 +6,7 @@
 function getAllUsers($mysqli) {
     $sql = "SELECT id, nom, email, role, statut, is_system FROM users ORDER BY nom ASC";
     $result = $mysqli->query($sql);
-    
+
     $users = [];
     if ($result) {
         while ($row = $result->fetch_assoc()) {
@@ -37,7 +37,6 @@ function updateUserRole($mysqli, $userId, $role) {
     if (!in_array($role, $allowedRoles)) {
         return false;
     }
-
     $sql = "UPDATE users SET role = ? WHERE id = ?";
     $stmt = $mysqli->prepare($sql);
     $stmt->bind_param("si", $role, $userId);
@@ -52,7 +51,6 @@ function toggleUserStatut($mysqli, $userId, $newStatut) {
     if (!in_array($newStatut, $allowedStatuts)) {
         return false;
     }
-
     $sql = "UPDATE users SET statut = ? WHERE id = ?";
     $stmt = $mysqli->prepare($sql);
     $stmt->bind_param("si", $newStatut, $userId);
@@ -73,7 +71,6 @@ function deleteUser($mysqli, $userId) {
  * Crée un nouvel utilisateur avec un rôle spécifique
  */
 function createUser($mysqli, $nom, $email, $password, $role = 'membre') {
-    // Vérifier si l'email existe déjà
     $sql_check = "SELECT id FROM users WHERE email = ?";
     $stmt_check = $mysqli->prepare($sql_check);
     $stmt_check->bind_param("s", $email);
@@ -88,13 +85,10 @@ function createUser($mysqli, $nom, $email, $password, $role = 'membre') {
     $sql = "INSERT INTO users (nom, email, password_hash, role, statut) VALUES (?, ?, ?, ?, 'actif')";
     $stmt = $mysqli->prepare($sql);
     $stmt->bind_param("ssss", $nom, $email, $password_hash, $role);
-    
+
     if ($stmt->execute()) {
-        return $mysqli->insert_id;
+        return true;
     } else {
         return "Erreur lors de la création de l'utilisateur : " . $stmt->error;
     }
 }
-
-// --- PROTECTION ---
-require_once __DIR__ . '/../../includes/auth/session.php';

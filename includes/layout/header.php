@@ -1,32 +1,11 @@
-<?php
-require_once __DIR__ . '/../auth/session.php';
-?>
+<!-- header.php : uniquement le HTML du <head> -->
 <!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><?= htmlspecialchars($pageTitle ?? 'Book Club') ?></title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: {
-            display: ['Playfair Display', 'serif'],
-            body:    ['DM Sans', 'sans-serif'],
-          },
-          colors: {
-            cream:  '#F5F0E8',
-            ink:    '#1C1917',
-            muted:  '#78716C',
-            accent: '#C2410C',
-            border: '#E2D9CC',
-          }
-        }
-      }
-    }
-  </script>
+  <?php include __DIR__ . '/partials/_head_tags.php'; ?>
   
   <script>
     // Utilitaires Globaux
@@ -62,6 +41,14 @@ require_once __DIR__ . '/../auth/session.php';
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
 </head>
-<body class="bg-cream min-h-screen font-body flex flex-col">
-<?php include __DIR__ . '/nav.php'; ?>
+<body class="bg-cream font-body flex flex-col text-ink <?= ($hideNav ?? false) ? 'h-screen overflow-hidden' : 'min-h-screen pt-14' ?>">
+  <?php if (!($hideNav ?? false)) include __DIR__ . '/nav.php'; ?>
+
+  <!-- Container Global pour les Messages Flash (masqué sur les pages sans nav) -->
+  <?php if (!($hideNav ?? false)): ?>
+  <div class="<?= $containerClass ?? 'max-w-7xl' ?> mx-auto w-full px-4 sm:px-6 lg:px-8 mt-6">
+    <?php include __DIR__ . "/partials/_flash.php"; ?>
+  </div>
+  <?php endif; ?>

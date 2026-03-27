@@ -1,0 +1,28 @@
+RewriteEngine On
+
+# Bloque l'accès direct aux dossiers sensibles et aux modules
+RewriteRule ^(includes|config|database|modules)(/|$) - [F,L]
+RewriteRule ^uploads/books/.*$ - [F,L]
+
+# Bloque l'accès aux fichiers de config
+<Files ~ "^\.user\.ini$">
+    Order allow,deny
+    Deny from all
+</Files>
+
+# Tout vers index.php (le router gère les 404)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.php [QSA,L]
+
+ErrorDocument 403 /error.php
+
+# Augmenter la taille des uploads (PDF)
+<IfModule mod_php7.c>
+    php_value upload_max_filesize 32M
+    php_value post_max_size 40M
+</IfModule>
+<IfModule mod_php.c>
+    php_value upload_max_filesize 32M
+    php_value post_max_size 40M
+</IfModule>
