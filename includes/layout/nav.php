@@ -15,11 +15,6 @@ if (!isUserLoggedIn()) return;
     </a>
 
     <div class="flex items-center gap-1">
-      <a href="<?= BASE_URL ?>/dashboard"
-         class="flex items-center gap-2 px-3 py-2 rounded-2xl text-stone-300 hover:text-cream hover:bg-stone-700 text-sm transition-all">
-        <i class="ph ph-chart-line-up text-base"></i>
-        Dashboard
-      </a>
       <a href="<?= BASE_URL ?>/"
          class="flex items-center gap-2 px-3 py-2 rounded-2xl text-stone-300 hover:text-cream hover:bg-stone-700 text-sm transition-all">
         <i class="ph ph-house text-base"></i>

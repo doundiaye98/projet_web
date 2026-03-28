@@ -22,10 +22,10 @@ function updatePassword($mysqli, $userId, $currentPassword, $newPassword) {
 }
 
 /**
- * Met à jour le nom et l'email d'un utilisateur
+ * Met à jour les informations du profil
  */
-function updateProfile($mysqli, $userId, $nom, $email, $avatarPath = null) {
-    if ($avatarPath !== null) {
+function updateProfile($mysqli, $userId, $nom, $email, $avatarPath = null, $updateAvatar = false) {
+    if ($updateAvatar) {
         $sql = "UPDATE users SET nom = ?, email = ?, avatar_path = ? WHERE id = ?";
         $stmt = $mysqli->prepare($sql);
         $stmt->bind_param("sssi", $nom, $email, $avatarPath, $userId);

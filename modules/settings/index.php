@@ -30,20 +30,31 @@ include __DIR__ . '/../../includes/layout/header.php';
             $avatarUrl = !empty($user['avatar_path']) ? BASE_URL . '/' . ltrim($user['avatar_path'], '/') : null;
         ?>
         <div class="flex gap-12">
-            <div class="flex-shrink-0">
-                <?php if ($avatarUrl): ?>
-                    <img src="<?= htmlspecialchars($avatarUrl) ?>" alt="Avatar"
-                         class="w-20 h-20 rounded-full border border-accent/40 object-cover">
-                <?php else: ?>
-                    <div class="w-20 h-20 rounded-full bg-accent/15 border border-accent/30 text-accent flex items-center justify-center text-2xl font-display select-none">
-                        <?= $initials ?>
+
+            <div class="flex-shrink-0 relative select-none" id="avatarPreviewContainer">
+                <img id="avatarImg" src="<?= $avatarUrl ? htmlspecialchars($avatarUrl) : '' ?>" alt="Avatar"
+                     class="w-20 h-20 rounded-full border border-accent/40 object-cover <?= !$avatarUrl ? 'hidden' : '' ?>">
+                <div id="avatarInitials" class="w-20 h-20 rounded-full bg-accent/15 border border-accent/30 text-accent items-center justify-center text-2xl font-display <?= $avatarUrl ? 'hidden' : 'flex' ?>">
+                    <?= $initials ?>
+                </div>
+                <!-- Icônes affichées uniquement au survol du cercle -->
+                <div class="absolute inset-0 flex items-center justify-center group/avatar">
+                    <div class="flex gap-2 opacity-0 group-hover/avatar:opacity-100 transition-opacity duration-200">
+                        <label for="avatarInput" title="Changer la photo" class="bg-white border border-border rounded-full p-1 shadow flex items-center justify-center text-accent hover:bg-accent/10 cursor-pointer transition w-7 h-7">
+                            <i class="ph ph-camera text-base"></i>
+                        </label>
+                        <button type="button" id="removeAvatarBtn" title="Supprimer la photo"
+                            class="bg-white border border-border rounded-full p-1 shadow flex items-center justify-center text-red-600 hover:bg-red-50 transition w-7 h-7 <?= !$avatarUrl ? '!hidden' : '' ?>">
+                            <i class="ph ph-x text-base"></i>
+                        </button>
                     </div>
-                <?php endif; ?>
+                </div>
             </div>
 
             <div class="flex-1">
             <form action="<?= BASE_URL ?>/settings" method="POST" id="profileForm" enctype="multipart/form-data">
                 <input type="hidden" name="action" value="update_profile">
+                <input id="avatarInput" type="file" name="avatar" accept="image/jpeg,image/png,image/webp" class="hidden">
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
@@ -52,12 +63,7 @@ include __DIR__ . '/../../includes/layout/header.php';
                             class="profile-input w-full px-0 py-1 bg-cream border-0 border-b border-transparent text-sm text-ink focus:outline-none focus:border-border transition-colors">
                     </div>
 
-                    <div>
-                        <label class="block text-xs font-semibold text-muted uppercase tracking-wider mb-2">Photo de profil</label>
-                        <input type="file" name="avatar" accept="image/jpeg,image/png,image/webp"
-                               class="block w-full text-sm text-muted file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-ink file:text-cream hover:file:bg-stone-800 cursor-pointer bg-cream border border-border rounded-xl px-2 py-1.5">
-                        <p class="mt-1 text-[11px] text-muted">JPG, PNG ou WEBP, taille raisonnable.</p>
-                    </div>
+                    <!-- Champ photo de profil masqué, géré par l'icône -->
 
                     <div>
                         <label class="block text-xs font-semibold text-muted uppercase tracking-wider mb-2">Email</label>
@@ -179,53 +185,117 @@ include __DIR__ . '/../../includes/layout/header.php';
 </main>
 
 <script>
-    const inputs = document.querySelectorAll('.profile-input');
-    const saveBar = document.getElementById('saveBar');
-    const cancelBtn = document.getElementById('cancelBtn');
-    const originals = {};
+document.addEventListener('DOMContentLoaded', () => {
+    // DRY : Gestionnaire de barre d'enregistrement (no redeclaration)
+    if (!window._setupSaveBar) {
+        window._setupSaveBar = function({ formId, barId, inputsSelector, cancelBtnId, onCancel }) {
+            const form = document.getElementById(formId);
+            const bar = document.getElementById(barId);
+            const inputs = document.querySelectorAll(inputsSelector);
+            const cancelBtn = document.getElementById(cancelBtnId);
+            const originals = {};
+            const updateBarVisibility = () => {
+                const hasChanged = Array.from(inputs).some(input => {
+                    if (input.type === 'file') return input.files.length > 0;
+                    return input.value !== (originals[input.name] || '');
+                }) || (form.querySelector('#removeAvatarFlag')?.value === '1');
+                if (hasChanged) {
+                    bar.classList.remove('opacity-0', '-translate-y-4', 'pointer-events-none', 'grid-rows-[0fr]');
+                    bar.classList.add('grid-rows-[1fr]');
+                } else {
+                    bar.classList.add('opacity-0', '-translate-y-4', 'pointer-events-none', 'grid-rows-[0fr]');
+                    bar.classList.remove('grid-rows-[1fr]');
+                }
+            };
+            inputs.forEach(input => {
+                originals[input.name] = input.value;
+                input.addEventListener('input', updateBarVisibility);
+                input.addEventListener('change', updateBarVisibility);
+            });
+            cancelBtn?.addEventListener('click', () => {
+                inputs.forEach(input => {
+                    if (input.type === 'file') input.value = '';
+                    else input.value = originals[input.name] || '';
+                });
+                form.querySelector('#removeAvatarFlag')?.remove();
+                onCancel?.();
+                updateBarVisibility();
+            });
+            return { updateBarVisibility };
+        }
+    }
 
-    inputs.forEach(input => {
-        originals[input.name] = input.value;
-        input.addEventListener('input', () => {
-            const changed = Array.from(inputs).some(i => i.value !== originals[i.name]);
-            if (changed) {
-                saveBar.classList.remove('opacity-0', '-translate-y-4', 'pointer-events-none', 'grid-rows-[0fr]');
-                saveBar.classList.add('grid-rows-[1fr]');
+    // Configuration Profil
+    const avatarImg = document.getElementById('avatarImg');
+    const avatarInitials = document.getElementById('avatarInitials');
+    const avatarInput = document.getElementById('avatarInput');
+    const removeAvatarBtn = document.getElementById('removeAvatarBtn');
+    const profileForm = document.getElementById('profileForm');
+    const initialAvatarSrc = avatarImg.src;
+    const initialAvatarHidden = avatarImg.classList.contains('hidden');
+    const profileManager = window._setupSaveBar({
+        formId: 'profileForm',
+        barId: 'saveBar',
+        inputsSelector: '.profile-input, #avatarInput',
+        cancelBtnId: 'cancelBtn',
+        onCancel: () => {
+            avatarImg.src = initialAvatarSrc;
+            if (initialAvatarHidden) {
+                avatarImg.classList.add('hidden');
+                avatarInitials.classList.remove('hidden');
+                avatarInitials.classList.add('flex');
             } else {
-                saveBar.classList.add('opacity-0', '-translate-y-4', 'pointer-events-none', 'grid-rows-[0fr]');
-                saveBar.classList.remove('grid-rows-[1fr]');
+                avatarImg.classList.remove('hidden');
+                avatarInitials.classList.add('hidden');
             }
-        });
+            removeAvatarBtn.classList.toggle('!hidden', initialAvatarHidden);
+        }
     });
-
-    cancelBtn.addEventListener('click', () => {
-        inputs.forEach(input => input.value = originals[input.name]);
-        saveBar.classList.add('opacity-0', '-translate-y-4', 'pointer-events-none', 'grid-rows-[0fr]');
-        saveBar.classList.remove('grid-rows-[1fr]');
+    // Prévisualisation de l'avatar
+    avatarInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                avatarImg.src = ev.target.result;
+                avatarImg.classList.remove('hidden');
+                avatarInitials.classList.add('hidden');
+                removeAvatarBtn.classList.remove('!hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+        // Remove the remove flag if user picks a new file
+        const removeFlag = document.getElementById('removeAvatarFlag');
+        if (removeFlag) removeFlag.remove();
+        profileManager.updateBarVisibility();
     });
-
-    const pwdInputs = document.querySelectorAll('.pwd-input');
-    const pwdSaveBar = document.getElementById('pwdSaveBar');
-    const pwdCancelBtn = document.getElementById('pwdCancelBtn');
-
-    pwdInputs.forEach(input => {
-        input.addEventListener('input', () => {
-            const anyNotEmpty = Array.from(pwdInputs).some(i => i.value.trim() !== '');
-            if (anyNotEmpty) {
-                pwdSaveBar.classList.remove('opacity-0', '-translate-y-4', 'pointer-events-none', 'grid-rows-[0fr]');
-                pwdSaveBar.classList.add('grid-rows-[1fr]');
-            } else {
-                pwdSaveBar.classList.add('opacity-0', '-translate-y-4', 'pointer-events-none', 'grid-rows-[0fr]');
-                pwdSaveBar.classList.remove('grid-rows-[1fr]');
-            }
-        });
+    // Suppression de l'avatar (UI)
+    removeAvatarBtn.addEventListener('click', () => {
+        let input = document.getElementById('removeAvatarFlag');
+        if (!input) {
+            input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'remove_avatar';
+            input.value = '1';
+            input.id = 'removeAvatarFlag';
+            profileForm.appendChild(input);
+        }
+        avatarImg.classList.add('hidden');
+        avatarInitials.classList.remove('hidden');
+        avatarInitials.classList.add('flex');
+        removeAvatarBtn.classList.add('!hidden');
+        // Also clear file input if any
+        avatarInput.value = '';
+        profileManager.updateBarVisibility();
     });
-
-    pwdCancelBtn.addEventListener('click', () => {
-        pwdInputs.forEach(input => input.value = '');
-        pwdSaveBar.classList.add('opacity-0', '-translate-y-4', 'pointer-events-none', 'grid-rows-[0fr]');
-        pwdSaveBar.classList.remove('grid-rows-[1fr]');
+    // Configuration Mot de passe
+    window._setupSaveBar({
+        formId: 'passwordForm',
+        barId: 'pwdSaveBar',
+        inputsSelector: '.pwd-input',
+        cancelBtnId: 'pwdCancelBtn'
     });
+});
 </script>
 
 

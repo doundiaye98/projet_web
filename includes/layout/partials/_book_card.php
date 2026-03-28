@@ -16,7 +16,7 @@ defined("SECURE_ACCESS") or die("Accès direct interdit");
      data-genre="<?= htmlspecialchars($book['genre'] ?? '') ?>"
      data-description="<?= htmlspecialchars($book['description'] ?? '') ?>"
      data-pages="<?= $book['nb_pages'] ?>"
-     data-date="<?= strtotime($book['created_at']) ?>"
+    data-date="<?= !empty($book['created_at']) ? strtotime($book['created_at']) : '' ?>"
      data-rating="<?= $book['avg_rating'] ?: 0 ?>"
      data-cover-path="<?= htmlspecialchars($book['cover_path'] ?? '') ?>"
      data-resources='<?= htmlspecialchars(json_encode($book['resources_list'] ?? []), ENT_QUOTES, 'UTF-8') ?>'

@@ -331,16 +331,12 @@ function hasTableColumn($mysqli, $table, $column) {
     if (array_key_exists($key, $cache)) {
         return $cache[$key];
     }
-    $stmt = $mysqli->prepare("SHOW COLUMNS FROM {$table} LIKE ?");
-    if (!$stmt) {
-        $cache[$key] = false;
-        return false;
-    }
-    $stmt->bind_param("s", $column);
-    $stmt->execute();
-    $stmt->store_result();
-    $exists = $stmt->num_rows > 0;
-    $stmt->close();
+    // Sécurise le nom de la table (évite l'injection SQL)
+    $table = preg_replace('/[^a-zA-Z0-9_]/', '', $table);
+    $column = $mysqli->real_escape_string($column);
+    $sql = "SHOW COLUMNS FROM `{$table}` LIKE '{$column}'";
+    $result = $mysqli->query($sql);
+    $exists = ($result && $result->num_rows > 0);
     $cache[$key] = $exists;
     return $exists;
 }

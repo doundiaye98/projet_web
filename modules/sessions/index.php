@@ -98,7 +98,7 @@ include __DIR__ . '/../../includes/layout/header.php';
     <?php include __DIR__ . '/../../includes/layout/partials/_flash.php'; ?>
 
     <?php if (empty($sessions)): ?>
-        <div class="rounded-2xl border border-border bg-white/70 p-8 text-center">
+        <div class="rounded-2xl border border-border p-8 text-center">
             <i class="ph ph-calendar-blank text-5xl text-muted/40"></i>
             <p class="mt-3 text-ink font-medium">Aucune session pour le moment.</p>
             <p class="text-sm text-muted mt-1">Revenez bientot pour les prochaines dates.</p>

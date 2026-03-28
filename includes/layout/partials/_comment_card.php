@@ -6,11 +6,14 @@ defined("SECURE_ACCESS") or die("Accès direct interdit");
  */
 require_once __DIR__ . '/../../helpers.php';
 
-$revAuthor = $rev['auteur_critique'] ?? 'Anonyme';
+$revAuthor = $rev['auteur_critique'] ?? $rev['author_name'] ?? 'Anonyme';
 $revInitials = getUserInitials($revAuthor);
 $revDate = formatDateFR($rev['created_at']);
 $revRating = $rev['note'] ?? 0;
 $revComment = $rev['commentaire'] ?? '';
+$revBookTitle = $rev['book_title'] ?? null;
+$revBookId = $rev['book_id'] ?? null;
+$revActions = $revActions ?? null;
 ?>
 
 <div class="group p-6 border border-border/40 rounded-[2rem] flex flex-col gap-4 transition-all duration-300 hover:border-accent/40 hover:bg-accent/5 mb-4">
@@ -21,6 +24,11 @@ $revComment = $rev['commentaire'] ?? '';
                 <?= $revInitials ?>
             </div>
             <div>
+                <?php if ($revBookTitle): ?>
+                    <p class="text-[11px] font-bold text-accent uppercase tracking-widest mb-1 leading-tight">
+                        <?= htmlspecialchars($revBookTitle) ?>
+                    </p>
+                <?php endif; ?>
                 <p class="text-sm font-bold text-ink">
                     <?= htmlspecialchars($revAuthor) ?>
                 </p>
@@ -41,7 +49,13 @@ $revComment = $rev['commentaire'] ?? '';
                 ?>
             </div>
 
-            <?php if (isUserLoggedIn() && $rev['user_id'] == $_SESSION['user_id']): ?>
+            <?php if ($revActions): ?>
+                <div class="flex items-center gap-1.5 ml-3 pl-3 border-l border-border/20">
+                    <?= $revActions ?>
+                </div>
+            <?php endif; ?>
+
+            <?php if (isUserLoggedIn() && isset($rev['user_id']) && $rev['user_id'] == $_SESSION['user_id']): ?>
                 <button onclick="openEditReviewModal(<?= $revRating ?>, '<?= addslashes(str_replace(["\r", "\n"], ' ', $revComment)) ?>')" 
                         class="text-muted hover:text-accent transition-colors p-2 rounded-full hover:bg-accent/10"
                         title="Modifier mon avis">

@@ -10,6 +10,7 @@ CREATE TABLE users (
   id INT AUTO_INCREMENT PRIMARY KEY,
   nom VARCHAR(100) NOT NULL,
   email VARCHAR(255) NOT NULL UNIQUE,
+  avatar_path VARCHAR(500) NULL,
   password_hash VARCHAR(255) NOT NULL,
   role ENUM('admin', 'moderateur', 'membre') NOT NULL DEFAULT 'membre',
   statut ENUM('actif', 'inactif', 'banni') NOT NULL DEFAULT 'actif',
