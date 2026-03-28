@@ -62,6 +62,21 @@ if ($stmt) {
     $stmt->close();
 }
 
+$booksForSession = [];
+if (in_array($userRole, ['admin', 'moderateur'], true)) {
+    $bq = $mysqli->query(
+        "SELECT b.id, b.titre, a.nom AS auteur
+         FROM books b
+         JOIN authors a ON a.id = b.author_id
+         ORDER BY b.titre ASC"
+    );
+    if ($bq) {
+        while ($row = $bq->fetch_assoc()) {
+            $booksForSession[] = $row;
+        }
+    }
+}
+
 include __DIR__ . '/../../includes/layout/header.php';
 ?>
 
@@ -72,10 +87,11 @@ include __DIR__ . '/../../includes/layout/header.php';
             <p class="text-muted mt-2">Retrouvez les prochaines rencontres du club.</p>
         </div>
         <?php if (in_array($userRole, ['admin', 'moderateur'], true)): ?>
-            <span class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-ink text-cream text-sm">
+            <button type="button" onclick="toggleModal('sessionCreateModal', true)"
+                class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-ink text-cream text-sm font-medium hover:bg-stone-800 transition-colors shadow-sm">
                 <i class="ph ph-shield-check text-base"></i>
                 Gestionnaire de sessions
-            </span>
+            </button>
         <?php endif; ?>
     </div>
 
@@ -86,6 +102,14 @@ include __DIR__ . '/../../includes/layout/header.php';
             <i class="ph ph-calendar-blank text-5xl text-muted/40"></i>
             <p class="mt-3 text-ink font-medium">Aucune session pour le moment.</p>
             <p class="text-sm text-muted mt-1">Revenez bientot pour les prochaines dates.</p>
+            <?php if (in_array($userRole, ['admin', 'moderateur'], true)): ?>
+                <p class="text-sm text-muted mt-3">
+                    En tant que moderateur, vous pouvez
+                    <button type="button" onclick="toggleModal('sessionCreateModal', true)" class="text-accent font-medium hover:underline">
+                        creer une session
+                    </button>.
+                </p>
+            <?php endif; ?>
         </div>
     <?php else: ?>
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
@@ -192,6 +216,102 @@ include __DIR__ . '/../../includes/layout/header.php';
         </div>
     <?php endif; ?>
 </main>
+
+<?php if (in_array($userRole, ['admin', 'moderateur'], true)): ?>
+<div id="sessionCreateModal"
+    class="fixed inset-0 z-50 overflow-y-auto opacity-0 pointer-events-none transition-all duration-300 ease-out"
+    role="dialog" aria-modal="true" aria-labelledby="sessionCreateModalTitle">
+    <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+        <div id="sessionCreateModalOverlay" class="fixed inset-0 bg-stone-900/0 transition-all duration-300 ease-out"
+            onclick="toggleModal('sessionCreateModal', false)"></div>
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+        <div id="sessionCreateModalContent"
+            class="inline-block align-bottom bg-cream rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all duration-300 ease-out opacity-0 scale-95 sm:my-8 sm:align-middle sm:w-full sm:max-w-lg border border-border font-body">
+
+            <div class="px-6 pt-6 pb-4 sm:px-8">
+                <div class="flex items-center justify-between">
+                    <h3 id="sessionCreateModalTitle" class="text-xl font-body font-bold tracking-tight text-ink">Nouvelle session</h3>
+                    <button type="button" onclick="toggleModal('sessionCreateModal', false)"
+                        class="text-muted hover:text-ink transition-colors">
+                        <i class="ph ph-x text-2xl"></i>
+                    </button>
+                </div>
+                <p class="text-sm text-muted mt-2">Planifiez une rencontre autour d'un ouvrage du catalogue.</p>
+            </div>
+
+            <?php if (empty($booksForSession)): ?>
+                <div class="px-6 pb-6 sm:px-8 sm:pb-8">
+                    <p class="text-sm text-ink/80">Ajoutez d'abord au moins un livre au catalogue pour creer une session.</p>
+                    <div class="mt-4 flex justify-end gap-3">
+                        <a href="<?= BASE_URL ?>/books" class="inline-flex items-center px-4 py-2 bg-ink text-cream text-sm font-medium rounded-xl hover:bg-stone-800 transition">
+                            Aller au catalogue
+                        </a>
+                    </div>
+                </div>
+            <?php else: ?>
+                <form action="<?= BASE_URL ?>/sessions" method="POST" class="px-6 pb-6 sm:px-8 sm:pb-8 space-y-4">
+                    <input type="hidden" name="action" value="create_session">
+
+                    <div class="space-y-1">
+                        <label class="block text-xs font-medium text-ink uppercase tracking-widest">Livre <span class="text-accent">*</span></label>
+                        <select name="book_id" required
+                            class="w-full px-4 py-3 bg-white border border-border rounded-2xl text-sm text-ink focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/10 transition">
+                            <option value="">Choisir un livre</option>
+                            <?php foreach ($booksForSession as $b): ?>
+                                <option value="<?= (int) $b['id'] ?>">
+                                    <?= htmlspecialchars($b['titre']) ?> — <?= htmlspecialchars($b['auteur']) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <div class="space-y-1">
+                        <label class="block text-xs font-medium text-ink uppercase tracking-widest">Titre de la session <span class="text-accent">*</span></label>
+                        <input type="text" name="titre" required maxlength="255" placeholder="Ex. : Club de mars — deuxieme partie"
+                            class="w-full px-4 py-3 bg-white border border-border rounded-2xl text-sm text-ink focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/10 transition">
+                    </div>
+
+                    <div class="space-y-1">
+                        <label class="block text-xs font-medium text-ink uppercase tracking-widest">Date et heure <span class="text-accent">*</span></label>
+                        <input type="datetime-local" name="date_heure" required
+                            class="w-full px-4 py-3 bg-white border border-border rounded-2xl text-sm text-ink focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/10 transition">
+                    </div>
+
+                    <div class="space-y-1">
+                        <label class="block text-xs font-medium text-ink uppercase tracking-widest">Lieu</label>
+                        <input type="text" name="lieu" maxlength="255" placeholder="Salle, adresse..."
+                            class="w-full px-4 py-3 bg-white border border-border rounded-2xl text-sm text-ink focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/10 transition">
+                    </div>
+
+                    <div class="space-y-1">
+                        <label class="block text-xs font-medium text-ink uppercase tracking-widest">Lien (visio, etc.)</label>
+                        <input type="text" name="lien" maxlength="500" placeholder="https://... ou domaine seul"
+                            class="w-full px-4 py-3 bg-white border border-border rounded-2xl text-sm text-ink focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/10 transition">
+                        <p class="text-[11px] text-muted">L'URL peut etre incomplete : elle sera completee si besoin.</p>
+                    </div>
+
+                    <div class="space-y-1">
+                        <label class="block text-xs font-medium text-ink uppercase tracking-widest">Description</label>
+                        <textarea name="description" rows="3" placeholder="Ordre du jour, consignes..."
+                            class="w-full px-4 py-3 bg-white border border-border rounded-2xl text-sm text-ink focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/10 transition resize-none"></textarea>
+                    </div>
+
+                    <div class="pt-2 flex items-center gap-3 justify-end">
+                        <button type="button" onclick="toggleModal('sessionCreateModal', false)"
+                            class="px-4 py-2 border border-border text-muted text-sm font-medium rounded-xl hover:bg-stone-50 transition-all">
+                            Annuler
+                        </button>
+                        <button type="submit"
+                            class="px-4 py-2 bg-ink text-cream text-sm font-medium rounded-xl hover:bg-stone-800 transition-all shadow-sm">
+                            Creer la session
+                        </button>
+                    </div>
+                </form>
+            <?php endif; ?>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
 
 <?php
 $hideFooterContent = true;
