@@ -36,15 +36,25 @@ function getOrCreateAuthor($mysqli, $nom) {
  * Récupère tous les livres avec le nom de l'auteur
  */
 function getAllBooks($mysqli) {
-    $sql = "SELECT b.id, b.author_id, b.titre, b.genre, b.description, b.cover_path, b.nb_pages, b.created_at,
-                   a.nom AS auteur,
-                   AVG(rev.note) AS avg_rating,
-                   GROUP_CONCAT(CONCAT(d.id, '::', d.filename, '::', d.filepath) ORDER BY d.is_main DESC, d.id ASC SEPARATOR '||') AS resources
+    $hasIsMain = hasTableColumn($mysqli, 'documents', 'is_main');
+    $resourcesExpr = $hasIsMain
+        ? "(SELECT GROUP_CONCAT(CONCAT(d.id, '::', d.filename, '::', d.filepath)
+                ORDER BY d.is_main DESC, d.id ASC SEPARATOR '||')
+           FROM documents d
+           WHERE d.book_id = b.id) AS resources"
+        : "(SELECT GROUP_CONCAT(CONCAT(d.id, '::', d.filename, '::', d.filepath)
+                ORDER BY d.id ASC SEPARATOR '||')
+           FROM documents d
+           WHERE d.book_id = b.id) AS resources";
+
+    // Requete compatible avec MySQL en mode ONLY_FULL_GROUP_BY
+    $sql = "SELECT
+                b.id, b.author_id, b.titre, b.genre, b.description, b.cover_path, b.nb_pages, b.created_at,
+                a.nom AS auteur,
+                (SELECT AVG(r.note) FROM reviews r WHERE r.book_id = b.id AND r.visible = 1) AS avg_rating,
+                {$resourcesExpr}
             FROM books b
-            JOIN authors a ON b.author_id = a.id
-            LEFT JOIN documents d ON b.id = d.book_id
-            LEFT JOIN reviews rev ON b.id = rev.book_id AND rev.visible = 1
-            GROUP BY b.id
+            JOIN authors a ON a.id = b.author_id
             ORDER BY b.created_at DESC";
     $result = $mysqli->query($sql);
     $books = [];
@@ -74,16 +84,26 @@ function getAllBooks($mysqli) {
  * Récupère les détails complets d'un livre (avec auteur et stats de notes)
  */
 function getBookDetails($mysqli, $id) {
-    $sql = "SELECT b.*, a.nom AS auteur, 
-                   AVG(r.note) AS avg_rating, 
-                   COUNT(r.id) AS reviews_count,
-                   (SELECT id FROM documents WHERE book_id = b.id AND is_main = 1 LIMIT 1) AS main_pdf_id,
-                   (SELECT filepath FROM documents WHERE book_id = b.id AND is_main = 1 LIMIT 1) AS main_pdf
+    $hasIsMain = hasTableColumn($mysqli, 'documents', 'is_main');
+    $mainPdfIdExpr = $hasIsMain
+        ? "(SELECT id FROM documents d WHERE d.book_id = b.id AND d.is_main = 1 ORDER BY d.id ASC LIMIT 1) AS main_pdf_id"
+        : "(SELECT id FROM documents d WHERE d.book_id = b.id ORDER BY d.id ASC LIMIT 1) AS main_pdf_id";
+    $mainPdfPathExpr = $hasIsMain
+        ? "(SELECT filepath FROM documents d WHERE d.book_id = b.id AND d.is_main = 1 ORDER BY d.id ASC LIMIT 1) AS main_pdf"
+        : "(SELECT filepath FROM documents d WHERE d.book_id = b.id ORDER BY d.id ASC LIMIT 1) AS main_pdf";
+
+    // Requete compatible avec MySQL en mode ONLY_FULL_GROUP_BY
+    $sql = "SELECT
+                b.*,
+                a.nom AS auteur,
+                (SELECT AVG(r.note) FROM reviews r WHERE r.book_id = b.id AND r.visible = 1) AS avg_rating,
+                (SELECT COUNT(*) FROM reviews r WHERE r.book_id = b.id AND r.visible = 1) AS reviews_count,
+                {$mainPdfIdExpr},
+                {$mainPdfPathExpr}
             FROM books b
-            JOIN authors a ON b.author_id = a.id
-            LEFT JOIN reviews r ON b.id = r.book_id AND r.visible = 1
+            JOIN authors a ON a.id = b.author_id
             WHERE b.id = ?
-            GROUP BY b.id";
+            LIMIT 1";
     
     $stmt = $mysqli->prepare($sql);
     $stmt->bind_param("i", $id);
@@ -95,7 +115,10 @@ function getBookDetails($mysqli, $id) {
  * Récupère les ressources complémentaires d'un livre
  */
 function getBookResources($mysqli, $id) {
-    $sql = "SELECT * FROM documents WHERE book_id = ? AND is_main = 0 ORDER BY id ASC";
+    $hasIsMain = hasTableColumn($mysqli, 'documents', 'is_main');
+    $sql = $hasIsMain
+        ? "SELECT * FROM documents WHERE book_id = ? AND is_main = 0 ORDER BY id ASC"
+        : "SELECT * FROM documents WHERE book_id = ? ORDER BY id ASC";
     $stmt = $mysqli->prepare($sql);
     $stmt->bind_param("i", $id);
     $stmt->execute();
@@ -136,11 +159,12 @@ function addReview($mysqli, $bookId, $userId, $note, $comment, $visible = 0) {
  * Supprime un document (fichier physique + base)
  */
 function deleteDocument($mysqli, $docId) {
-    $stmt = $mysqli->prepare("SELECT filepath FROM documents WHERE id = ?");
+    $stmt = $mysqli->prepare("SELECT filepath, filename FROM documents WHERE id = ?");
     $stmt->bind_param("i", $docId);
     $stmt->execute();
     $row = $stmt->get_result()->fetch_assoc();
-    safeUnlink($row['filepath'] ?? null);
+    $abs = resolveDocumentRowAbsolutePath($row ?: []);
+    safeUnlink($abs);
     $stmt = $mysqli->prepare("DELETE FROM documents WHERE id = ?");
     $stmt->bind_param("i", $docId);
     return $stmt->execute();
@@ -190,6 +214,135 @@ function safeUnlink($filepath) {
     if ($filepath && file_exists($filepath)) {
         @unlink($filepath);
     }
+}
+
+/**
+ * Racine du projet (dossier contenant index.php et uploads/).
+ */
+function getProjectRootPath() {
+    return dirname(__DIR__, 2);
+}
+
+/**
+ * Chemin absolu vers un fichier document à partir de la valeur en BDD (relatif ou absolu Windows).
+ */
+function resolveDocumentAbsolutePath($storedPath) {
+    if ($storedPath === null || $storedPath === '') {
+        return null;
+    }
+    $storedPath = trim($storedPath);
+    if ($storedPath === '') {
+        return null;
+    }
+
+    if (preg_match('#^[a-zA-Z]:[\\\\/]#', $storedPath)) {
+        $normalized = str_replace('/', DIRECTORY_SEPARATOR, $storedPath);
+        return file_exists($normalized) ? $normalized : null;
+    }
+    if ($storedPath[0] === '/' || $storedPath[0] === '\\') {
+        $normalized = str_replace('/', DIRECTORY_SEPARATOR, $storedPath);
+        return file_exists($normalized) ? $normalized : null;
+    }
+
+    $rel = str_replace(['\\'], '/', $storedPath);
+    $rel = ltrim($rel, '/');
+    $full = getProjectRootPath() . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $rel);
+
+    return file_exists($full) ? $full : null;
+}
+
+/**
+ * Résout le chemin absolu d'un document en BDD (chemin relatif, absolu, ou seulement nom de fichier dans uploads/books).
+ */
+function resolveDocumentRowAbsolutePath(array $doc) {
+    $primary = resolveDocumentAbsolutePath($doc['filepath'] ?? '');
+    if ($primary) {
+        return $primary;
+    }
+
+    $candidates = [];
+    $fp = trim((string) ($doc['filepath'] ?? ''));
+    if ($fp !== '') {
+        $candidates[] = basename(str_replace('\\', '/', $fp));
+    }
+    $fn = trim((string) ($doc['filename'] ?? ''));
+    if ($fn !== '') {
+        $candidates[] = basename(str_replace('\\', '/', $fn));
+    }
+
+    $root = getProjectRootPath();
+    $booksDir = $root . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'books';
+    foreach (array_unique(array_filter($candidates)) as $base) {
+        if ($base === '' || $base === '.') {
+            continue;
+        }
+        $try = $booksDir . DIRECTORY_SEPARATOR . $base;
+        if (file_exists($try)) {
+            return $try;
+        }
+    }
+
+    return null;
+}
+
+/**
+ * Content-Type fiable pour un PDF (évite les PDFs illisibles si mime BDD est vide ou erroné).
+ */
+function resolvePdfContentType($absolutePath, $dbMime) {
+    $dbMime = trim((string) $dbMime);
+    if ($absolutePath && preg_match('/\.pdf$/i', $absolutePath)) {
+        return 'application/pdf';
+    }
+    if ($dbMime !== '' && stripos($dbMime, 'pdf') !== false) {
+        return 'application/pdf';
+    }
+    return $dbMime !== '' ? $dbMime : 'application/pdf';
+}
+
+/**
+ * Content-Type pour téléchargement (PDF, texte, etc.).
+ */
+function resolveDownloadContentType($absolutePath, $dbMime) {
+    if ($absolutePath && is_readable($absolutePath)) {
+        if (function_exists('finfo_open')) {
+            $finfo = new finfo(FILEINFO_MIME_TYPE);
+            $detected = $finfo->file($absolutePath);
+            if (is_string($detected) && $detected !== '' && $detected !== 'application/octet-stream') {
+                return $detected;
+            }
+        }
+    }
+    $dbMime = trim((string) $dbMime);
+    if ($dbMime !== '') {
+        return $dbMime;
+    }
+    if ($absolutePath && preg_match('/\.txt$/i', $absolutePath)) {
+        return 'text/plain; charset=UTF-8';
+    }
+    return 'application/octet-stream';
+}
+
+/**
+ * Vérifie l'existence d'une colonne (avec cache local)
+ */
+function hasTableColumn($mysqli, $table, $column) {
+    static $cache = [];
+    $key = $table . '.' . $column;
+    if (array_key_exists($key, $cache)) {
+        return $cache[$key];
+    }
+    $stmt = $mysqli->prepare("SHOW COLUMNS FROM {$table} LIKE ?");
+    if (!$stmt) {
+        $cache[$key] = false;
+        return false;
+    }
+    $stmt->bind_param("s", $column);
+    $stmt->execute();
+    $stmt->store_result();
+    $exists = $stmt->num_rows > 0;
+    $stmt->close();
+    $cache[$key] = $exists;
+    return $exists;
 }
 
 /**
@@ -266,10 +419,30 @@ function uploadPdf($file, $uploadDir) {
  * Insère un livre en base de données
  */
 function addBook($mysqli, $authorId, $titre, $genre, $description, $coverPath, $nbPages, $userId) {
-    $sql = "INSERT INTO books (author_id, titre, genre, description, cover_path, nb_pages, created_by)
-            VALUES (?, ?, ?, ?, ?, ?, ?)";
-    $stmt = $mysqli->prepare($sql);
-    $stmt->bind_param("issssii", $authorId, $titre, $genre, $description, $coverPath, $nbPages, $userId);
+    $hasGenre = hasTableColumn($mysqli, 'books', 'genre');
+    $hasDateDebut = hasTableColumn($mysqli, 'books', 'date_debut');
+    $hasDateFin = hasTableColumn($mysqli, 'books', 'date_fin');
+
+    if ($hasGenre && $hasDateDebut && $hasDateFin) {
+        $sql = "INSERT INTO books (author_id, titre, genre, description, cover_path, nb_pages, date_debut, date_fin, created_by)
+                VALUES (?, ?, ?, ?, ?, ?, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 30 DAY), ?)";
+        $stmt = $mysqli->prepare($sql);
+        if (!$stmt) return false;
+        $stmt->bind_param("issssii", $authorId, $titre, $genre, $description, $coverPath, $nbPages, $userId);
+    } elseif ($hasGenre) {
+        $sql = "INSERT INTO books (author_id, titre, genre, description, cover_path, nb_pages, created_by)
+                VALUES (?, ?, ?, ?, ?, ?, ?)";
+        $stmt = $mysqli->prepare($sql);
+        if (!$stmt) return false;
+        $stmt->bind_param("issssii", $authorId, $titre, $genre, $description, $coverPath, $nbPages, $userId);
+    } else {
+        $sql = "INSERT INTO books (author_id, titre, description, cover_path, nb_pages, created_by)
+                VALUES (?, ?, ?, ?, ?, ?)";
+        $stmt = $mysqli->prepare($sql);
+        if (!$stmt) return false;
+        $stmt->bind_param("isssii", $authorId, $titre, $description, $coverPath, $nbPages, $userId);
+    }
+
     if ($stmt->execute()) return (int)$mysqli->insert_id;
     return false;
 }
@@ -278,25 +451,47 @@ function addBook($mysqli, $authorId, $titre, $genre, $description, $coverPath, $
  * Insère un document (PDF) lié à un livre dans la table documents
  */
 function addDocument($mysqli, $bookId, $filename, $filepath, $mime, $size, $userId, $isMain = false) {
-    $sql = "INSERT INTO documents (book_id, filename, filepath, mime, size, is_main, uploaded_by)
-            VALUES (?, ?, ?, ?, ?, ?, ?)";
-    $stmt = $mysqli->prepare($sql);
-    $mainVal = $isMain ? 1 : 0;
-    $stmt->bind_param("isssiii", $bookId, $filename, $filepath, $mime, $size, $mainVal, $userId);
+    $hasIsMain = hasTableColumn($mysqli, 'documents', 'is_main');
+    if ($hasIsMain) {
+        $sql = "INSERT INTO documents (book_id, filename, filepath, mime, size, is_main, uploaded_by)
+                VALUES (?, ?, ?, ?, ?, ?, ?)";
+        $stmt = $mysqli->prepare($sql);
+        $mainVal = $isMain ? 1 : 0;
+        $stmt->bind_param("isssiii", $bookId, $filename, $filepath, $mime, $size, $mainVal, $userId);
+    } else {
+        $sql = "INSERT INTO documents (book_id, filename, filepath, mime, size, uploaded_by)
+                VALUES (?, ?, ?, ?, ?, ?)";
+        $stmt = $mysqli->prepare($sql);
+        $stmt->bind_param("isssii", $bookId, $filename, $filepath, $mime, $size, $userId);
+    }
     return $stmt->execute();
 }
 /**
  * Met à jour un livre (métadonnées + couverture optionnelle)
  */
 function updateBook($mysqli, $id, $authorId, $titre, $genre, $description, $coverPath, $nbPages) {
+    $hasGenre = hasTableColumn($mysqli, 'books', 'genre');
+
     if ($coverPath) {
-        $sql = "UPDATE books SET author_id = ?, titre = ?, genre = ?, description = ?, cover_path = ?, nb_pages = ? WHERE id = ?";
-        $stmt = $mysqli->prepare($sql);
-        $stmt->bind_param("issssii", $authorId, $titre, $genre, $description, $coverPath, $nbPages, $id);
+        if ($hasGenre) {
+            $sql = "UPDATE books SET author_id = ?, titre = ?, genre = ?, description = ?, cover_path = ?, nb_pages = ? WHERE id = ?";
+            $stmt = $mysqli->prepare($sql);
+            $stmt->bind_param("issssii", $authorId, $titre, $genre, $description, $coverPath, $nbPages, $id);
+        } else {
+            $sql = "UPDATE books SET author_id = ?, titre = ?, description = ?, cover_path = ?, nb_pages = ? WHERE id = ?";
+            $stmt = $mysqli->prepare($sql);
+            $stmt->bind_param("isssii", $authorId, $titre, $description, $coverPath, $nbPages, $id);
+        }
     } else {
-        $sql = "UPDATE books SET author_id = ?, titre = ?, genre = ?, description = ?, nb_pages = ? WHERE id = ?";
-        $stmt = $mysqli->prepare($sql);
-        $stmt->bind_param("isssii", $authorId, $titre, $genre, $description, $nbPages, $id);
+        if ($hasGenre) {
+            $sql = "UPDATE books SET author_id = ?, titre = ?, genre = ?, description = ?, nb_pages = ? WHERE id = ?";
+            $stmt = $mysqli->prepare($sql);
+            $stmt->bind_param("isssii", $authorId, $titre, $genre, $description, $nbPages, $id);
+        } else {
+            $sql = "UPDATE books SET author_id = ?, titre = ?, description = ?, nb_pages = ? WHERE id = ?";
+            $stmt = $mysqli->prepare($sql);
+            $stmt->bind_param("issii", $authorId, $titre, $description, $nbPages, $id);
+        }
     }
     return $stmt->execute();
 }
@@ -305,17 +500,42 @@ function updateBook($mysqli, $id, $authorId, $titre, $genre, $description, $cove
  * Met à jour ou insère le document PDF d'un livre
  */
 function updateDocument($mysqli, $bookId, $filename, $filepath, $mime, $size, $userId) {
+    $hasIsMain = hasTableColumn($mysqli, 'documents', 'is_main');
+
     // Supprimer l'ancien fichier physique s'il existe
-    $stmt = $mysqli->prepare("SELECT filepath FROM documents WHERE book_id = ? AND is_main = 1");
+    $sqlOld = $hasIsMain
+        ? "SELECT filepath FROM documents WHERE book_id = ? AND is_main = 1 ORDER BY id ASC LIMIT 1"
+        : "SELECT filepath FROM documents WHERE book_id = ? ORDER BY id ASC LIMIT 1";
+    $stmt = $mysqli->prepare($sqlOld);
     $stmt->bind_param("i", $bookId);
     $stmt->execute();
     $row = $stmt->get_result()->fetch_assoc();
-    safeUnlink($row['filepath'] ?? null);
+    safeUnlink(resolveDocumentRowAbsolutePath($row ?: []));
 
-    $sql = "UPDATE documents SET filename = ?, filepath = ?, mime = ?, size = ?, uploaded_by = ?, uploaded_at = NOW() WHERE book_id = ? AND is_main = 1";
-    $stmt = $mysqli->prepare($sql);
-    $stmt->bind_param("sssiii", $filename, $filepath, $mime, $size, $userId, $bookId);
-    return $stmt->execute();
+    if ($hasIsMain) {
+        $sql = "UPDATE documents SET filename = ?, filepath = ?, mime = ?, size = ?, uploaded_by = ?, uploaded_at = NOW()
+                WHERE book_id = ? AND is_main = 1";
+        $stmt = $mysqli->prepare($sql);
+        $stmt->bind_param("sssiii", $filename, $filepath, $mime, $size, $userId, $bookId);
+        return $stmt->execute();
+    }
+
+    // Sans is_main: update du premier document trouvé, sinon insertion
+    $stmtId = $mysqli->prepare("SELECT id FROM documents WHERE book_id = ? ORDER BY id ASC LIMIT 1");
+    $stmtId->bind_param("i", $bookId);
+    $stmtId->execute();
+    $existing = $stmtId->get_result()->fetch_assoc();
+    $stmtId->close();
+
+    if ($existing) {
+        $docId = (int)$existing['id'];
+        $sql = "UPDATE documents SET filename = ?, filepath = ?, mime = ?, size = ?, uploaded_by = ?, uploaded_at = NOW() WHERE id = ?";
+        $stmt = $mysqli->prepare($sql);
+        $stmt->bind_param("sssiii", $filename, $filepath, $mime, $size, $userId, $docId);
+        return $stmt->execute();
+    }
+
+    return addDocument($mysqli, $bookId, $filename, $filepath, $mime, $size, $userId, true);
 }
 
 /**
@@ -333,8 +553,9 @@ function deleteBook($mysqli, $id) {
     $result = $stmt->get_result();
     
     while ($row = $result->fetch_assoc()) {
-        safeUnlink($row['cover_path'] ? __DIR__ . '/../../' . $row['cover_path'] : null);
-        safeUnlink($row['filepath'] ?? null);
+        $coverRel = $row['cover_path'] ?? '';
+        safeUnlink($coverRel ? resolveDocumentAbsolutePath($coverRel) : null);
+        safeUnlink(resolveDocumentAbsolutePath($row['filepath'] ?? ''));
     }
     
     // 2. Supprimer de la DB
@@ -393,16 +614,17 @@ function getUserReadingList($mysqli, $userId) {
     $sql = "SELECT b.id, b.author_id, b.titre, b.genre, b.description, b.cover_path, b.nb_pages,
                    a.nom AS auteur,
                    ps.page_actuelle, ps.updated_at AS last_read,
-                   AVG(rev.note) AS avg_rating
+                   (SELECT AVG(r.note) FROM reviews r WHERE r.book_id = b.id) AS avg_rating
             FROM books b
             JOIN authors a ON b.author_id = a.id
             JOIN progress_solo ps ON b.id = ps.book_id
-            LEFT JOIN reviews rev ON b.id = rev.book_id AND rev.visible = 1
             WHERE ps.user_id = ?
-            GROUP BY b.id
             ORDER BY ps.updated_at DESC";
     
     $stmt = $mysqli->prepare($sql);
+    if (!$stmt) {
+        return [];
+    }
     $stmt->bind_param("i", $userId);
     $stmt->execute();
     $result = $stmt->get_result();

@@ -27,16 +27,22 @@ include __DIR__ . '/../../includes/layout/header.php';
             if (count($words) > 1) {
                 $initials .= mb_strtoupper(mb_substr(end($words), 0, 1));
             }
+            $avatarUrl = !empty($user['avatar_path']) ? BASE_URL . '/' . ltrim($user['avatar_path'], '/') : null;
         ?>
         <div class="flex gap-12">
             <div class="flex-shrink-0">
-                <div class="w-20 h-20 rounded-full bg-accent/15 border border-accent/30 text-accent flex items-center justify-center text-2xl font-display select-none">
-                    <?= $initials ?>
-                </div>
+                <?php if ($avatarUrl): ?>
+                    <img src="<?= htmlspecialchars($avatarUrl) ?>" alt="Avatar"
+                         class="w-20 h-20 rounded-full border border-accent/40 object-cover">
+                <?php else: ?>
+                    <div class="w-20 h-20 rounded-full bg-accent/15 border border-accent/30 text-accent flex items-center justify-center text-2xl font-display select-none">
+                        <?= $initials ?>
+                    </div>
+                <?php endif; ?>
             </div>
 
             <div class="flex-1">
-            <form action="<?= BASE_URL ?>/settings" method="POST" id="profileForm">
+            <form action="<?= BASE_URL ?>/settings" method="POST" id="profileForm" enctype="multipart/form-data">
                 <input type="hidden" name="action" value="update_profile">
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -44,6 +50,13 @@ include __DIR__ . '/../../includes/layout/header.php';
                         <label class="block text-xs font-semibold text-muted uppercase tracking-wider mb-2">Nom</label>
                         <input type="text" name="nom" value="<?= htmlspecialchars($user['nom']) ?>"
                             class="profile-input w-full px-0 py-1 bg-cream border-0 border-b border-transparent text-sm text-ink focus:outline-none focus:border-border transition-colors">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-muted uppercase tracking-wider mb-2">Photo de profil</label>
+                        <input type="file" name="avatar" accept="image/jpeg,image/png,image/webp"
+                               class="block w-full text-sm text-muted file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-ink file:text-cream hover:file:bg-stone-800 cursor-pointer bg-cream border border-border rounded-xl px-2 py-1.5">
+                        <p class="mt-1 text-[11px] text-muted">JPG, PNG ou WEBP, taille raisonnable.</p>
                     </div>
 
                     <div>

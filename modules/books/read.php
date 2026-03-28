@@ -14,20 +14,27 @@ if (!$doc) {
     die("Erreur : Document introuvable.");
 }
 
-// Mode Flux (Stream) : Envoie le fichier au navigateur
+// Mode Flux (Stream) : Envoie le fichier au navigateur (iframe lecteur)
 if ($stream === 1) {
-    $filePath = __DIR__ . '/../../' . $doc['filepath'];
+    $filePath = resolveDocumentRowAbsolutePath($doc);
     
-    if (file_exists($filePath)) {
-        if (ob_get_level()) ob_end_clean();
+    if ($filePath && is_readable($filePath)) {
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
 
-        header('Content-Type: ' . $doc['mime']);
-        header('Content-Disposition: inline; filename="' . basename($doc['filename']) . '"');
+        $ctype = resolvePdfContentType($filePath, $doc['mime'] ?? '');
+        header('Content-Type: ' . $ctype);
+        header('Content-Disposition: inline; filename="' . basename($doc['filename'] ?? 'document.pdf') . '"');
         header('Content-Length: ' . filesize($filePath));
-        
+        header('Cache-Control: private, max-age=0, must-revalidate');
+        header('X-Content-Type-Options: nosniff');
+        header('Accept-Ranges: bytes');
+
         readfile($filePath);
         exit();
     }
+    http_response_code(404);
     die("Erreur : Fichier physique introuvable.");
 }
 
@@ -108,7 +115,7 @@ include __DIR__ . '/../../includes/layout/header.php';
                     <label for="page_actuelle" class="block text-xs font-medium text-ink uppercase tracking-widest">Page actuelle <span class="text-accent">*</span></label>
                     <div class="relative">
                         <input type="number" name="page_actuelle" id="page_actuelle" 
-                               min="1" max="<?= $doc['nb_pages'] ?>" required
+                               min="1"<?= (int)$doc['nb_pages'] > 0 ? ' max="' . (int)$doc['nb_pages'] . '"' : '' ?> required
                                class="w-full px-4 py-3 bg-white border border-border rounded-xl text-sm text-ink focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/10 transition font-bold"
                                placeholder="Ex: 42">
                         <?php if($doc['nb_pages'] > 0): ?>

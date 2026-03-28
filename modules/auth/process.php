@@ -34,11 +34,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (empty($email) || empty($password)) {
             $_SESSION['flash_error'] = "Veuillez remplir tous les champs.";
         } else {
-            if (login($mysqli, $email, $password)) {
+            $loginError = null;
+            if (login($mysqli, $email, $password, $loginError)) {
                 header('Location: ' . BASE_URL . '/');
                 exit;
             } else {
-                $_SESSION['flash_error'] = "Email ou mot de passe incorrect.";
+                $_SESSION['flash_error'] = $loginError ?: "Email ou mot de passe incorrect.";
             }
         }
         header('Location: ' . BASE_URL . '/login');

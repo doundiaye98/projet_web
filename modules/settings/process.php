@@ -12,6 +12,7 @@ if ($action === 'update_profile') {
     $currentUser = getUserById($mysqli, $_SESSION['user_id']);
     $nom         = trim($_POST['nom'] ?? '');
     $email       = $currentUser['is_system'] ? $currentUser['email'] : trim($_POST['email'] ?? '');
+    $avatarPath  = $currentUser['avatar_path'] ?? null;
 
     if (empty($nom) || empty($email)) {
         $_SESSION['flash_error'] = 'Le nom et l\'email sont obligatoires.';
@@ -31,10 +32,33 @@ if ($action === 'update_profile') {
         exit();
     }
 
-    $result = updateProfile($mysqli, $_SESSION['user_id'], $nom, $email);
+    // Gestion upload avatar
+    if (!empty($_FILES['avatar']['name'] ?? '')) {
+        $file = $_FILES['avatar'];
+        if ($file['error'] === UPLOAD_ERR_OK) {
+            $allowed = ['image/jpeg', 'image/png', 'image/webp'];
+            if (in_array($file['type'], $allowed, true)) {
+                $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
+                $safeName = 'avatar_user_' . (int)$_SESSION['user_id'] . '.' . strtolower($ext);
+                $uploadDir = __DIR__ . '/../../uploads/avatars';
+                if (!is_dir($uploadDir)) {
+                    mkdir($uploadDir, 0775, true);
+                }
+                $target = $uploadDir . '/' . $safeName;
+                if (move_uploaded_file($file['tmp_name'], $target)) {
+                    $avatarPath = 'uploads/avatars/' . $safeName;
+                }
+            }
+        }
+    }
+
+    $result = updateProfile($mysqli, $_SESSION['user_id'], $nom, $email, $avatarPath);
     if ($result === true) {
         $_SESSION['user_name']  = $nom;
         $_SESSION['user_email'] = $email;
+        if ($avatarPath !== null) {
+            $_SESSION['user_avatar'] = $avatarPath;
+        }
         $_SESSION['flash_success'] = 'Profil mis à jour avec succès.';
     } else {
         $_SESSION['flash_error'] = $result;

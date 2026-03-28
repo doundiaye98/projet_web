@@ -2,6 +2,8 @@
 defined("SECURE_ACCESS") or die("Accès direct interdit");
 require_once __DIR__ . '/../auth/session.php';
 $userRole = getUserRole();
+// Avatar éventuel en session
+$userAvatar = $_SESSION['user_avatar'] ?? null;
 if (!isUserLoggedIn()) return;
 ?>
 <nav class="fixed top-0 left-0 right-0 bg-stone-800/95 backdrop-blur-md border-b border-stone-700 py-3 px-6 z-50">
@@ -13,6 +15,11 @@ if (!isUserLoggedIn()) return;
     </a>
 
     <div class="flex items-center gap-1">
+      <a href="<?= BASE_URL ?>/dashboard"
+         class="flex items-center gap-2 px-3 py-2 rounded-2xl text-stone-300 hover:text-cream hover:bg-stone-700 text-sm transition-all">
+        <i class="ph ph-chart-line-up text-base"></i>
+        Dashboard
+      </a>
       <a href="<?= BASE_URL ?>/"
          class="flex items-center gap-2 px-3 py-2 rounded-2xl text-stone-300 hover:text-cream hover:bg-stone-700 text-sm transition-all">
         <i class="ph ph-house text-base"></i>
@@ -46,8 +53,14 @@ if (!isUserLoggedIn()) return;
 
     <div class="flex items-center gap-1">
       <a href="<?= BASE_URL ?>/settings"
-         class="flex items-center gap-2 px-3 py-2 rounded-2xl text-stone-300 hover:text-cream hover:bg-stone-700 text-sm transition-all" title="Profil">
-        <i class="ph ph-user-circle text-lg"></i>
+         class="flex items-center gap-2 px-2 py-1.5 rounded-2xl text-stone-300 hover:text-cream hover:bg-stone-700 text-sm transition-all" title="Profil">
+        <?php if ($userAvatar): ?>
+          <img src="<?= htmlspecialchars(BASE_URL . '/' . ltrim($userAvatar, '/')) ?>"
+               alt="Avatar"
+               class="w-7 h-7 rounded-full object-cover border border-stone-500/60">
+        <?php else: ?>
+          <i class="ph ph-user-circle text-lg"></i>
+        <?php endif; ?>
       </a>
       <a href="<?= BASE_URL ?>/logout"
          class="flex items-center gap-2 px-3 py-2 rounded-2xl text-stone-300 hover:text-cream hover:bg-stone-700 text-sm transition-all" title="Déconnexion">

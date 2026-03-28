@@ -24,10 +24,16 @@ function updatePassword($mysqli, $userId, $currentPassword, $newPassword) {
 /**
  * Met à jour le nom et l'email d'un utilisateur
  */
-function updateProfile($mysqli, $userId, $nom, $email) {
-    $sql = "UPDATE users SET nom = ?, email = ? WHERE id = ?";
-    $stmt = $mysqli->prepare($sql);
-    $stmt->bind_param("ssi", $nom, $email, $userId);
+function updateProfile($mysqli, $userId, $nom, $email, $avatarPath = null) {
+    if ($avatarPath !== null) {
+        $sql = "UPDATE users SET nom = ?, email = ?, avatar_path = ? WHERE id = ?";
+        $stmt = $mysqli->prepare($sql);
+        $stmt->bind_param("sssi", $nom, $email, $avatarPath, $userId);
+    } else {
+        $sql = "UPDATE users SET nom = ?, email = ? WHERE id = ?";
+        $stmt = $mysqli->prepare($sql);
+        $stmt->bind_param("ssi", $nom, $email, $userId);
+    }
     return $stmt->execute() ? true : 'Erreur lors de la mise à jour du profil.';
 }
 
@@ -47,7 +53,7 @@ function isEmailTaken($mysqli, $email, $excludeUserId) {
  * Récupère les informations d'un utilisateur par son ID
  */
 function getUserById($mysqli, $userId) {
-    $sql = "SELECT id, nom, email, role, statut, created_at, is_system FROM users WHERE id = ?";
+    $sql = "SELECT id, nom, email, avatar_path, role, statut, created_at, is_system FROM users WHERE id = ?";
     $stmt = $mysqli->prepare($sql);
     $stmt->bind_param("i", $userId);
     $stmt->execute();

@@ -24,6 +24,7 @@ if (!in_array($path, $publicPaths)) {
 // Table de routage — chemins simples, include dans le scope global ($mysqli accessible partout)
 $routes = [
     'GET:/' => 'modules/home.php',
+    'GET:/dashboard' => 'modules/dashboard/index.php',
     'GET:/login' => 'modules/auth/login.php',
     'POST:/login' => 'modules/auth/process.php',
     'GET:/register' => 'modules/auth/register.php',
@@ -33,6 +34,9 @@ $routes = [
     'POST:/settings' => 'modules/settings/process.php',
     'GET:/books' => 'modules/books/index.php',
     'POST:/books' => 'modules/books/process.php',
+    'GET:/sessions' => 'modules/sessions/index.php',
+    'POST:/sessions' => 'modules/sessions/process.php',
+    'GET:/moderation' => 'modules/moderation/index.php',
     'GET:/members' => 'modules/members/index.php',
     'POST:/members' => 'modules/members/process.php',
     'GET:/download' => 'modules/books/download.php',

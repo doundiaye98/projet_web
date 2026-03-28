@@ -6,7 +6,14 @@ defined("SECURE_ACCESS") or die("Accès direct interdit");
  */
 $resFilename = $res['filename'] ?? 'Fichier';
 $resPath = $res['filepath'] ?? '#';
-$resSize = isset($res['size']) ? round($res['size'] / 1024 / 1024, 2) . ' Mo' : 'Taille inconnue';
+$bytes = isset($res['size']) ? (int) $res['size'] : 0;
+if ($bytes <= 0) {
+    $resSize = '—';
+} elseif ($bytes < 1048576) {
+    $resSize = round($bytes / 1024, 1) . ' Ko';
+} else {
+    $resSize = round($bytes / 1048576, 2) . ' Mo';
+}
 $resExt = pathinfo($resFilename, PATHINFO_EXTENSION);
 
 // Icône selon extension
