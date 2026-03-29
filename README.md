@@ -2,7 +2,7 @@
 
 Une plateforme web pour gérer un club de lecture, suivre ses progressions et partager des avis sur des livres.
 
-## 🚀 Installation & Setup
+## Installation & Setup
 
 Ce projet est entièrement conteneurisé avec Docker pour faciliter le déploiement.
 
@@ -34,12 +34,12 @@ docker compose up -d --build
 
 Le site sera accessible à l'adresse : [http://localhost:8080](http://localhost:8080)
 
-## 🔑 Accès Administrateur
+## Accès Administrateur
 Un compte administrateur est créé automatiquement lors du premier lancement :
 - **Email** : `admin@club.test`
 - **Mot de passe** : `admin123`
 
-## 📂 Structure du Projet
+## Structure du Projet
 - `modules/` : Logique métier (Auth, Livres, Sessions, etc.)
 - `includes/` : Composants réutilisables (Header, Nav, Helpers)
 - `database/` : Scripts SQL et initialisation
