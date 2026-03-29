@@ -5,9 +5,12 @@ defined("SECURE_ACCESS") or die("Accès direct interdit");
  * Accessible via /books/[id]
  */
 require_once __DIR__ . '/functions.php';
+require_once __DIR__ . '/../sessions/functions.php';
 
+$bookId = (int)($bookId ?? 0);
 $book = getBookDetails($mysqli, $bookId);
 $userProgress = getUserProgress($mysqli, $_SESSION['user_id'], $bookId);
+$sessionsProgress = getBookSessionsProgress($mysqli, $_SESSION['user_id'], $bookId);
 
 if (!$book) {
     http_response_code(404);
@@ -80,13 +83,34 @@ include __DIR__ . '/../../includes/layout/header.php';
                 </p>
             </div>
 
-            <!-- Ma Progression -->
+            <!-- Ma Progression Solo -->
             <?php if ($book['nb_pages'] > 0): ?>
                 <?php
                 $current = $userProgress;
                 $total = $book['nb_pages'];
                 include __DIR__ . '/../../includes/layout/partials/_progress_bar.php';
                 ?>
+            <?php endif; ?>
+
+            <!-- Progressions Sessions -->
+            <?php if (!empty($sessionsProgress)): ?>
+                <div class="space-y-4 pt-2">
+                    <h4 class="text-[10px] font-bold text-accent uppercase tracking-[0.2em] px-1 opacity-80 italic">Progression du Club</h4>
+                    <?php foreach ($sessionsProgress as $sp): ?>
+                        <div class="space-y-1.5">
+                            <div class="flex justify-between items-end px-1">
+                                <span class="text-[11px] font-bold text-ink truncate max-w-[180px]"><?= htmlspecialchars($sp['session_title']) ?></span>
+                                <span class="text-[10px] font-bold text-accent"><?= (int)$sp['page_actuelle'] ?> / <?= (int)$sp['nb_pages'] ?></span>
+                            </div>
+                            <?php
+                            $current = (int)$sp['page_actuelle'];
+                            $total = (int)$sp['nb_pages'];
+                            $customColor = 'bg-blue-500'; // Bleu pour les sessions, orange pour le solo
+                            include __DIR__ . '/../../includes/layout/partials/_progress_bar.php';
+                            ?>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
             <?php endif; ?>
 
             <!-- Détails techniques -->

@@ -17,7 +17,7 @@ $users = getAllUsers($mysqli);
 include __DIR__ . '/../../includes/layout/header.php';
 ?>
 
-<main class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
+<main class="w-full py-10 px-4 sm:px-8 lg:px-20">
     <div class="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
         <div>
             <h1 class="text-3xl font-body font-bold tracking-tight text-ink">Gestion des membres</h1>

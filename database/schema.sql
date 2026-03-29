@@ -1,9 +1,7 @@
-CREATE DATABASE projet_web;
-
+CREATE DATABASE IF NOT EXISTS projet_web;
 USE projet_web;
 
--- ----------------------------------------------------
-----
+-- --------------------------------------------------------
 -- USERS
 -- --------------------------------------------------------
 CREATE TABLE users (

@@ -12,7 +12,7 @@ $readingList = getUserReadingList($mysqli, $userId);
 include __DIR__ . '/../../includes/layout/header.php';
 ?>
 
-<main class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
+<main class="w-full py-10 px-4 sm:px-8 lg:px-20">
 
   <!-- En-tête Original -->
   <div class="mb-10 flex flex-col md:flex-row md:items-end md:justify-between gap-6">
@@ -484,6 +484,8 @@ include __DIR__ . '/../../includes/layout/header.php';
       function renderDropdown(q) {
         const filtered = q ? authorsList.filter(n => n.toLowerCase().includes(q.toLowerCase())) : authorsList;
         dropdown.innerHTML = '';
+        if (filtered.length === 0) { dropdown.classList.add('hidden'); return; }
+        dropdown.classList.remove('hidden');
         filtered.forEach(nom => {
           const d = document.createElement('div');
           d.className = 'px-4 py-2 text-sm text-ink hover:bg-stone-100 cursor-pointer';
@@ -493,8 +495,8 @@ include __DIR__ . '/../../includes/layout/header.php';
         });
       }
       comboInput.onfocus = () => renderDropdown(comboInput.value.trim());
-      comboInput.oninput = () => renderDropdown(comboInput.value.trim());
-      comboInput.onblur = () => setTimeout(() => dropdown.classList.add('hidden'), 150);
+      comboInput.oninput = () => { renderDropdown(comboInput.value.trim()); authorHidden.value = comboInput.value.trim(); };
+      comboInput.onblur = () => { setTimeout(() => dropdown.classList.add('hidden'), 150); authorHidden.value = comboInput.value.trim(); };
     }
 
     const coverInput = document.getElementById('coverInput');

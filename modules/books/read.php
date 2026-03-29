@@ -4,11 +4,16 @@ defined("SECURE_ACCESS") or die("Accès direct interdit");
  * Lecteur de livre intégré - Version avec Suivi de Progression (Style Marque-page Épuré)
  */
 require_once __DIR__ . '/functions.php';
+require_once __DIR__ . '/../sessions/functions.php';
+
+$userId = (int)($_SESSION['user_id'] ?? 0);
+$userRole = getUserRole();
 
 $id = (int)($_GET['id'] ?? 0);
 $stream = (int)($_GET['stream'] ?? 0);
 
 $doc = getDocumentById($mysqli, $id);
+$sessionsProgress = getBookSessionsProgress($mysqli, $userId, (int)($doc['book_id'] ?? 0));
 
 if (!$doc) {
     die("Erreur : Document introuvable.");
@@ -107,12 +112,35 @@ include __DIR__ . '/../../includes/layout/header.php';
                 </div>
             </div>
 
-            <form action="<?= BASE_URL ?>/books" method="POST" class="px-6 pb-6 sm:px-8 sm:pb-8 space-y-5">
+                <form action="<?= BASE_URL ?>/books" method="POST" class="px-6 pb-6 sm:px-8 sm:pb-8 space-y-5">
                 <input type="hidden" name="action" value="save_progress">
                 <input type="hidden" name="book_id" value="<?= $doc['book_id'] ?>">
 
+                <?php if (!empty($sessionsProgress)): ?>
+                    <div class="p-4 rounded-2xl bg-accent/5 border border-accent/10 space-y-4">
+                        <div class="flex items-center gap-2 px-1">
+                            <i class="ph ph-users-three text-accent text-lg"></i>
+                            <h4 class="text-xs font-bold text-ink uppercase tracking-widest">Objectifs du Club</h4>
+                        </div>
+                        <?php foreach ($sessionsProgress as $sp): ?>
+                            <div class="space-y-1.5">
+                                <div class="flex justify-between items-end px-1">
+                                    <span class="text-[11px] font-bold text-ink truncate max-w-[200px]"><?= htmlspecialchars($sp['session_title']) ?></span>
+                                    <span class="text-[10px] font-bold text-accent">PAGE <?= (int)$sp['page_actuelle'] ?></span>
+                                </div>
+                                <?php
+                                $current = (int)$sp['page_actuelle'];
+                                $total = (int)$sp['nb_pages'];
+                                $customColor = 'bg-blue-500';
+                                include __DIR__ . '/../../includes/layout/partials/_progress_bar.php';
+                                ?>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+
                 <div class="space-y-2">
-                    <label for="page_actuelle" class="block text-xs font-medium text-ink uppercase tracking-widest">Page actuelle <span class="text-accent">*</span></label>
+                    <label for="page_actuelle" class="block text-xs font-medium text-ink uppercase tracking-widest">Ma progression solo <span class="text-accent">*</span></label>
                     <div class="relative">
                         <input type="number" name="page_actuelle" id="page_actuelle" 
                                min="1"<?= (int)$doc['nb_pages'] > 0 ? ' max="' . (int)$doc['nb_pages'] . '"' : '' ?> required

@@ -1,9 +1,11 @@
 <?php
 
-$host = 'localhost';
-$user = 'root';
-$db_password = 'root';
-$db = 'projet_web';
+date_default_timezone_set('Europe/Paris');
+
+$host = getenv('DB_HOST') ?: 'localhost';
+$user = getenv('DB_USER') ?: 'root';
+$db_password = getenv('DB_PASS') ?: 'root';
+$db = getenv('DB_NAME') ?: 'projet_web';
 
 $mysqli = new mysqli($host, $user, $db_password, $db);
 

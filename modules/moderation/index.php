@@ -15,17 +15,13 @@ if (!in_array($userRole, ['admin', 'moderateur'], true)) {
 
 $pageTitle = 'Moderation';
 $hiddenReviews = [];
-$stats = [
-    'hidden_reviews' => getHiddenReviewsCount($mysqli),
-    'reported_books' => getReportedBooksCount($mysqli),
-    'active_moderators' => getActiveModeratorsCount($mysqli),
-];
+$stats = getModerationStats($mysqli);
 $hiddenReviews = getHiddenReviews($mysqli, 8);
 
 include __DIR__ . '/../../includes/layout/header.php';
 ?>
 
-<main class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
+<main class="w-full py-10 px-4 sm:px-8 lg:px-20">
     <div class="mb-8">
         <h1 class="text-3xl font-body font-bold tracking-tight text-ink">Modération</h1>
         <p class="text-muted mt-2">Espace de suivi des contenus à modérer et de la sécurité de la communauté.</p>
@@ -54,7 +50,7 @@ include __DIR__ . '/../../includes/layout/header.php';
         </div>
 
         <?php if (empty($hiddenReviews)): ?>
-            <div class="rounded-xl border border-border/80 bg-cream/60 p-6 text-center">
+            <div class="py-12 text-center">
                 <p class="text-ink font-medium">Aucun avis masque actuellement.</p>
                 <p class="text-sm text-muted mt-1">La file de moderation est vide.</p>
             </div>

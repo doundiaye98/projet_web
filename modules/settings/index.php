@@ -10,7 +10,7 @@ $pageTitle = 'Paramètres';
 include __DIR__ . '/../../includes/layout/header.php';
 ?>
 
-<main class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
+<main class="w-full py-10 px-4 sm:px-8 lg:px-20">
 
     <?php include __DIR__ . '/../../includes/layout/partials/_flash.php'; ?>
 

@@ -16,7 +16,7 @@ list($readingProgress, $progressStats) = getReadingProgress($mysqli, $userId);
 include __DIR__ . '/../includes/layout/header.php';
 ?>
 
-<main class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
+<main class="w-full py-10 px-4 sm:px-8 lg:px-20">
 
     <div class="mb-8">
         <h1 class="text-3xl font-body font-bold tracking-tight text-ink mb-2 text-left">

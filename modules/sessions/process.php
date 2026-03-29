@@ -1,6 +1,7 @@
 <?php
 defined("SECURE_ACCESS") or die("Acces direct interdit");
 require_once __DIR__ . '/../../includes/auth/session.php';
+require_once __DIR__ . '/functions.php';
 requireLogin();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -37,142 +38,95 @@ if ($action === 'create_session') {
         exit();
     }
 
-    if (mb_strlen($titre) > 255) {
-        $_SESSION['flash_error'] = "Le titre est trop long (255 caracteres max).";
-        header('Location: ' . BASE_URL . '/sessions');
-        exit();
-    }
-
+    // Normalisation date
     $dateHeure = null;
     $normalized = str_replace('T', ' ', $dateRaw);
     if (preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/', $normalized)) {
         $dateHeure = $normalized . ':00';
     } elseif (preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $normalized)) {
         $dateHeure = $normalized;
-    }
-    if ($dateHeure === null) {
+    } else {
         $ts = strtotime($dateRaw);
-        if ($ts !== false) {
-            $dateHeure = date('Y-m-d H:i:s', $ts);
-        }
+        if ($ts !== false) $dateHeure = date('Y-m-d H:i:s', $ts);
     }
+    
     if ($dateHeure === null) {
         $_SESSION['flash_error'] = "Date ou heure invalide.";
         header('Location: ' . BASE_URL . '/sessions');
         exit();
     }
 
-    $chk = $mysqli->prepare("SELECT id FROM books WHERE id = ? LIMIT 1");
-    if (!$chk) {
-        $_SESSION['flash_error'] = "Erreur interne.";
-        header('Location: ' . BASE_URL . '/sessions');
-        exit();
-    }
-    $chk->bind_param("i", $bookId);
-    $chk->execute();
-    if (!$chk->get_result()->fetch_assoc()) {
-        $chk->close();
-        $_SESSION['flash_error'] = "Livre introuvable.";
-        header('Location: ' . BASE_URL . '/sessions');
-        exit();
-    }
-    $chk->close();
+    $data = [
+        'book_id' => $bookId,
+        'titre' => mb_substr($titre, 0, 255),
+        'date_heure' => $dateHeure,
+        'lieu' => mb_substr($lieu, 0, 255),
+        'lien' => mb_substr($lien, 0, 500),
+        'description' => $description
+    ];
 
-    if (mb_strlen($lieu) > 255) {
-        $lieu = mb_substr($lieu, 0, 255);
-    }
-    if (mb_strlen($lien) > 500) {
-        $lien = mb_substr($lien, 0, 500);
-    }
-
-    $sql = "INSERT INTO sessions (book_id, titre, date_heure, lieu, lien, description, created_by)
-            VALUES (?, ?, ?, ?, ?, ?, ?)";
-    $stmt = $mysqli->prepare($sql);
-    if (!$stmt) {
-        $_SESSION['flash_error'] = "Erreur lors de la creation.";
-        header('Location: ' . BASE_URL . '/sessions');
-        exit();
-    }
-
-    $stmt->bind_param(
-        "isssssi",
-        $bookId,
-        $titre,
-        $dateHeure,
-        $lieu,
-        $lien,
-        $description,
-        $userId
-    );
-    if ($stmt->execute()) {
-        $_SESSION['flash_success'] = "Session creee.";
+    if (createSessionWithCreator($mysqli, $userId, $data)) {
+        $_SESSION['flash_success'] = "Session creee avec succes.";
     } else {
         $_SESSION['flash_error'] = "Impossible d'enregistrer la session.";
     }
-    $stmt->close();
-
+    
     header('Location: ' . BASE_URL . '/sessions');
     exit();
 }
 
 $sessionId = (int) ($_POST['session_id'] ?? 0);
-
 if (!$sessionId) {
-    $_SESSION['flash_error'] = "Action impossible.";
+    $_SESSION['flash_error'] = "Session invalide.";
     header('Location: ' . BASE_URL . '/sessions');
     exit();
 }
-
-$stmt = $mysqli->prepare("SELECT id, date_heure FROM sessions WHERE id = ? LIMIT 1");
-if (!$stmt) {
-    $_SESSION['flash_error'] = "Erreur interne.";
-    header('Location: ' . BASE_URL . '/sessions');
-    exit();
-}
-$stmt->bind_param("i", $sessionId);
-$stmt->execute();
-$sessionRow = $stmt->get_result()->fetch_assoc();
-$stmt->close();
-
-if (!$sessionRow) {
-    $_SESSION['flash_error'] = "Session introuvable.";
-    header('Location: ' . BASE_URL . '/sessions');
-    exit();
-}
-
-$isPast = strtotime($sessionRow['date_heure']) < time();
 
 if ($action === 'join_session') {
-    if ($isPast) {
-        $_SESSION['flash_error'] = "Impossible de s'inscrire a une session terminee.";
-        header('Location: ' . BASE_URL . '/sessions');
-        exit();
-    }
+    $stmt = $mysqli->prepare("SELECT date_heure FROM sessions WHERE id = ?");
+    $stmt->bind_param("i", $sessionId);
+    $stmt->execute();
+    $sessionData = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
 
-    $sql = "INSERT INTO session_attendance (session_id, user_id, statut)
-            VALUES (?, ?, 'inscrit')
-            ON DUPLICATE KEY UPDATE statut = 'inscrit'";
-    $stmt = $mysqli->prepare($sql);
-    if ($stmt) {
-        $stmt->bind_param("ii", $sessionId, $userId);
-        $ok = $stmt->execute();
-        $stmt->close();
-        $_SESSION['flash_success'] = $ok ? "Participation enregistree." : "Erreur lors de l'inscription.";
+    if ($sessionData && strtotime($sessionData['date_heure']) < time()) {
+        $_SESSION['flash_error'] = "Vous ne pouvez plus rejoindre cette session car elle est deja lancee.";
+    } elseif (joinSession($mysqli, $sessionId, $userId)) {
+        $_SESSION['flash_success'] = "Participation enregistree.";
     } else {
         $_SESSION['flash_error'] = "Erreur lors de l'inscription.";
     }
 } elseif ($action === 'leave_session') {
-    $stmt = $mysqli->prepare("DELETE FROM session_attendance WHERE session_id = ? AND user_id = ?");
-    if ($stmt) {
-        $stmt->bind_param("ii", $sessionId, $userId);
-        $ok = $stmt->execute();
-        $stmt->close();
-        $_SESSION['flash_success'] = $ok ? "Participation annulee." : "Erreur lors de l'annulation.";
+    if (leaveSession($mysqli, $sessionId, $userId)) {
+        $_SESSION['flash_success'] = "Participation annulee.";
     } else {
         $_SESSION['flash_error'] = "Erreur lors de l'annulation.";
     }
+} elseif ($action === 'delete_session') {
+    if (getUserRole() !== 'admin') {
+        $_SESSION['flash_error'] = "Action reservee aux administrateurs.";
+    } elseif (deleteSession($mysqli, $sessionId)) {
+        $_SESSION['flash_success'] = "Session supprimee.";
+    } else {
+        $_SESSION['flash_error'] = "Erreur lors de la suppression.";
+    }
+} elseif ($action === 'update_session_progression') {
+    $page = (int) ($_POST['page_actuelle'] ?? 0);
+    $userRole = getUserRole();
+    
+    if (!canManageSession($mysqli, $sessionId, $userId, $userRole)) {
+        $_SESSION['flash_error'] = "Vous n'avez pas l'autorisation de modifier cette session.";
+    } elseif ($page < 0) {
+        $_SESSION['flash_error'] = "Page invalide.";
+    } else {
+        if (syncSessionProgress($mysqli, $sessionId, $page)) {
+            $_SESSION['flash_success'] = "Progression de la session mise a jour pour tous les membres !";
+        } else {
+            $_SESSION['flash_error'] = "Erreur lors de la synchronisation de la progression.";
+        }
+    }
 } else {
-    $_SESSION['flash_error'] = "Action invalide.";
+    $_SESSION['flash_error'] = "Action inconnue.";
 }
 
 header('Location: ' . BASE_URL . '/sessions');

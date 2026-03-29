@@ -3,3 +3,5 @@ uploads/covers/*
 uploads/books/*
 !uploads/covers/.gitkeep
 !uploads/books/.gitkeep
+.docker
+.env

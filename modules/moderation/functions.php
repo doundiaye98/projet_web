@@ -24,40 +24,17 @@ function deleteReview($mysqli, $reviewId) {
 // Fonctions pour la modération avec requêtes préparées
 require_once __DIR__ . '/../../config/db.php';
 
-function getHiddenReviewsCount($mysqli) {
-    $stmt = $mysqli->prepare("SELECT COUNT(*) AS total FROM reviews WHERE visible = 0");
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $count = ($result && $row = $result->fetch_assoc()) ? (int)$row['total'] : 0;
-    $stmt->close();
-    return $count;
-}
-
-function getReportedBooksCount($mysqli) {
+function getModerationStats($mysqli) {
     $stmt = $mysqli->prepare("
-        SELECT COUNT(DISTINCT b.id) AS total
-        FROM books b
-        JOIN reviews r ON r.book_id = b.id
-        WHERE r.visible = 0
+        SELECT
+            (SELECT COUNT(*) FROM reviews WHERE visible = 0) AS hidden_reviews,
+            (SELECT COUNT(DISTINCT book_id) FROM reviews WHERE visible = 0) AS reported_books,
+            (SELECT COUNT(*) FROM users WHERE role IN ('admin', 'moderateur') AND statut = 'actif') AS active_moderators
     ");
     $stmt->execute();
-    $result = $stmt->get_result();
-    $count = ($result && $row = $result->fetch_assoc()) ? (int)$row['total'] : 0;
+    $row = $stmt->get_result()->fetch_assoc();
     $stmt->close();
-    return $count;
-}
-
-function getActiveModeratorsCount($mysqli) {
-    $stmt = $mysqli->prepare("
-        SELECT COUNT(*) AS total
-        FROM users
-        WHERE role IN ('admin', 'moderateur') AND statut = 'actif'
-    ");
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $count = ($result && $row = $result->fetch_assoc()) ? (int)$row['total'] : 0;
-    $stmt->close();
-    return $count;
+    return $row ?: ['hidden_reviews' => 0, 'reported_books' => 0, 'active_moderators' => 0];
 }
 
 function getHiddenReviews($mysqli, $limit = 8) {
